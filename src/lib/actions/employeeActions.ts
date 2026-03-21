@@ -2,34 +2,33 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import bcrypt from "bcrypt";
+import { auth } from "@/lib/auth"; // Better Auth instance
 
-// ✅ CREATE
-export async function createEmployee(formData: FormData) {
-  console.log("Received form data:", Object.fromEntries(formData.entries()));
-  const session = await getServerSession(authOptions);
-  console.log("Session user:", session);
-  // if (!session || (session.user as any).role !== "ADMIN") {
-  //   throw new Error("Unauthorized");
-  // }
+export interface EmployeeInput {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+}
 
-  const name = formData.get("name")?.toString();
-  const email = formData.get("email")?.toString();
-  const phone = formData.get("phone")?.toString();
-  const password = formData.get("password")?.toString();
+// ✅ CREATE EMPLOYEE
+export async function createEmployee(input: EmployeeInput) {
+  const user = await auth.getUserFromRequest();
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Unauthorized");
+  }
 
-  if (!name || !email || !password) throw new Error("Required fields missing");
+  if (!input.name || !input.email || !input.password) {
+    throw new Error("Required fields missing");
+  }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-
+  // Better Auth handles password hashing automatically
   await prisma.user.create({
     data: {
-      name,
-      email,
-      phone,
-      password: hashedPassword,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      password: input.password,
       role: "EMPLOYEE",
     },
   });
@@ -37,36 +36,32 @@ export async function createEmployee(formData: FormData) {
   revalidatePath("/admin/dashboard/employees");
 }
 
-// ✅ UPDATE
-export async function updateEmployee(id: string, formData: FormData) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "ADMIN") {
+// ✅ UPDATE EMPLOYEE
+export async function updateEmployee(id: string, input: Partial<EmployeeInput>) {
+  const user = await auth.getUserFromRequest();
+  if (!user || user.role !== "ADMIN") {
     throw new Error("Unauthorized");
   }
 
-  const name = formData.get("name")?.toString();
-  const email = formData.get("email")?.toString();
-  const phone = formData.get("phone")?.toString();
-  const password = formData.get("password")?.toString();
-
-  const data: any = { name, email, phone };
-  if (password) {
-    data.password = await bcrypt.hash(password, 10);
-  }
+  const updateData: any = {};
+  if (input.name) updateData.name = input.name;
+  if (input.email) updateData.email = input.email;
+  if (input.phone) updateData.phone = input.phone;
+  if (input.password) updateData.password = input.password; // Better Auth hashes automatically
 
   await prisma.user.update({
     where: { id },
-    data,
+    data: updateData,
   });
 
   revalidatePath("/admin/dashboard/employees");
 }
 
-// ✅ DELETE
+// ✅ DELETE EMPLOYEE
 export async function deleteEmployee(id: string) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== "ADMIN") {
-    throw new Error("Only admin can delete employees");
+  const user = await auth.getUserFromRequest();
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Unauthorized");
   }
 
   const employee = await prisma.user.findUnique({ where: { id } });

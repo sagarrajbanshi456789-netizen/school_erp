@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createEmployee } from "@/lib/actions/employeeActions";
 import { employeeSchema } from "@/lib/validations/employeeSchema";
 import {
   Dialog,
@@ -13,42 +12,39 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PasswordInput from "@/components/password/password-input";
+import PasswordStrength from "@/components/password/Password-strength";
 import { toast } from "sonner";
-import PasswordInput from "@/components/ui/password-input";
-import PasswordStrength from "@/components/ui/password-strength";
+import { createEmployee } from "@/lib/actions/employeeActions"; // Server action
+
+interface FormDataType {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+}
 
 export default function AddEmployeeDialog() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormDataType, string>>>({});
 
-
-  const [errors, setErrors] = useState<any>({});
-
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormDataType>({
     name: "",
     email: "",
     phone: "",
     password: "",
   });
 
-
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
-
-    // remove error for edited field
-    setErrors((prev: any) => ({
-      ...prev,
-      [e.target.name]: "",
-    }));
-
+    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
 
-    if (loading) return; // prevent double submit
-
-    // ✨ Trim values before validation
     const cleanedForm = {
       name: form.name.trim(),
       email: form.email.trim(),
@@ -56,17 +52,14 @@ export default function AddEmployeeDialog() {
       password: form.password,
     };
 
-    // ✅ Zod validation
+    // ✅ Validate form
     const result = employeeSchema.safeParse(cleanedForm);
-
     if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-
-      for (const issue of result.error.issues) {
-        const field = issue.path[0] as string;
+      const fieldErrors: Partial<Record<keyof FormDataType, string>> = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as keyof FormDataType;
         fieldErrors[field] = issue.message;
-      }
-
+      });
       setErrors(fieldErrors);
       return;
     }
@@ -75,37 +68,19 @@ export default function AddEmployeeDialog() {
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      Object.entries(cleanedForm).forEach(([key, value]) =>
-        formData.append(key, value)
-      );
-
-      await createEmployee(formData);
+      // ✅ Call server action (secure)
+      await createEmployee(cleanedForm);
 
       toast.success("Employee created ✅");
-
-      // ✅ reset form only on success
-      setForm({
-        name: "",
-        email: "",
-        phone: "",
-        password: "",
-      });
-
+      setForm({ name: "", email: "", phone: "", password: "" });
       setOpen(false);
     } catch (err: unknown) {
       console.error(err);
-
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to create employee"
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to create employee");
     } finally {
       setLoading(false);
     }
   }
-
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -126,11 +101,10 @@ export default function AddEmployeeDialog() {
               name="name"
               value={form.name}
               onChange={handleChange}
-              required autoComplete="name"
+              required
+              autoComplete="name"
             />
-            {errors.name && (
-              <p className="text-red-500 text-sm">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
           </div>
 
           {/* EMAIL */}
@@ -141,11 +115,10 @@ export default function AddEmployeeDialog() {
               type="email"
               value={form.email}
               onChange={handleChange}
-              required autoComplete="email"
+              required
+              autoComplete="email"
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
           </div>
 
           {/* PHONE */}
@@ -157,30 +130,20 @@ export default function AddEmployeeDialog() {
               onChange={handleChange}
               autoComplete="tel"
             />
-            {errors.phone && (
-              <p className="text-red-500 text-sm">{errors.phone}</p>
-            )}
+            {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
           </div>
 
-          {/* PASSWORD WITH TOGGLE */}
+          {/* PASSWORD */}
           <div>
             <Label>Password</Label>
-
             <PasswordInput
               value={form.password}
-              onChange={(e) =>
-                setForm({ ...form, password: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
               placeholder="Create password"
             />
-
             <PasswordStrength password={form.password} />
-
-            {errors.password && (
-              <p className="text-red-500 text-sm">{errors.password}</p>
-            )}
+            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
           </div>
-
 
           <Button
             type="submit"
