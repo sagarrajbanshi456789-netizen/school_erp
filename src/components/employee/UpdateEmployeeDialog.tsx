@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { employeeSchema } from "@/lib/validations/employeeSchema";
+import { updateEmployee } from "@/lib/actions/employeeActions"; // server action
 import {
   Dialog,
   DialogContent,
@@ -15,26 +16,19 @@ import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/password/password-input";
 import PasswordStrength from "@/components/password/Password-strength";
 import { toast } from "sonner";
-import { createEmployee } from "@/lib/actions/employeeActions"; // Server action
 
-interface FormDataType {
+interface UpdateEmployeeDialogProps {
+  id: string;
   name: string;
   email: string;
-  phone: string;
-  password: string;
+  phone?: string;
 }
 
-export default function AddEmployeeDialog() {
+export default function UpdateEmployeeDialog({ id, name, email, phone = "" }: UpdateEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormDataType, string>>>({});
-
-  const [form, setForm] = useState<FormDataType>({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ name, email, phone, password: "" });
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -52,12 +46,11 @@ export default function AddEmployeeDialog() {
       password: form.password,
     };
 
-    // ✅ Zod validation
     const result = employeeSchema.safeParse(cleanedForm);
     if (!result.success) {
-      const fieldErrors: Partial<Record<keyof FormDataType, string>> = {};
+      const fieldErrors: Partial<Record<keyof typeof form, string>> = {};
       result.error.issues.forEach((issue) => {
-        const field = issue.path[0] as keyof FormDataType;
+        const field = issue.path[0] as keyof typeof form;
         fieldErrors[field] = issue.message;
       });
       setErrors(fieldErrors);
@@ -68,15 +61,12 @@ export default function AddEmployeeDialog() {
     setLoading(true);
 
     try {
-      // ✅ Call server action directly
-      await createEmployee(cleanedForm);
-
-      toast.success("Employee created ✅");
-      setForm({ name: "", email: "", phone: "", password: "" });
+      await updateEmployee(id, cleanedForm);
+      toast.success("Employee updated ✅");
       setOpen(false);
     } catch (err: unknown) {
       console.error(err);
-      toast.error(err instanceof Error ? err.message : "Failed to create employee");
+      toast.error(err instanceof Error ? err.message : "Failed to update employee");
     } finally {
       setLoading(false);
     }
@@ -85,51 +75,33 @@ export default function AddEmployeeDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Add Employee</Button>
+        <Button>Edit</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Employee</DialogTitle>
+          <DialogTitle>Edit Employee</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* NAME */}
           <div>
             <Label>Full Name</Label>
-            <Input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              autoComplete="name"
-            />
+            <Input name="name" value={form.name} onChange={handleChange} required autoComplete="name" />
             {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
           </div>
 
           {/* EMAIL */}
           <div>
             <Label>Email</Label>
-            <Input
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-              autoComplete="email"
-            />
+            <Input name="email" type="email" value={form.email} onChange={handleChange} required autoComplete="email" />
             {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
           </div>
 
           {/* PHONE */}
           <div>
             <Label>Phone</Label>
-            <Input
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              autoComplete="tel"
-            />
+            <Input name="phone" value={form.phone} onChange={handleChange} autoComplete="tel" />
             {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
           </div>
 
@@ -139,18 +111,14 @@ export default function AddEmployeeDialog() {
             <PasswordInput
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="Create password"
+              placeholder="Leave blank to keep existing password"
             />
             <PasswordStrength password={form.password} />
             {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
           </div>
 
-          <Button
-            type="submit"
-            disabled={loading || form.password.length < 6}
-            className="w-full"
-          >
-            {loading ? "Saving..." : "Save Employee"}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Saving..." : "Update Employee"}
           </Button>
         </form>
       </DialogContent>

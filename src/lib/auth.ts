@@ -50,7 +50,7 @@ export const auth = betterAuth({
 			console.log("SERVER DEBUG: sendVerificationEmail triggered")
 			console.log("SERVER DEBUG: user object =", user)
 			console.log("SERVER DEBUG: verification URL =", url)
-	console.log("=".repeat(50))
+			console.log("=".repeat(50))
 			console.log("EMAIL VERIFICATION TRIGGERED!")
 			console.log("User:", user.email)
 			console.log("URL:", url)
