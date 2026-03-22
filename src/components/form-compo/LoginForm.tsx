@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 
@@ -32,10 +32,46 @@ export default function LoginForm({
 
   const isMounted = useRef(true)
 
+  useEffect(() => {
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
+  // 🔁 Auto redirect if already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const session = await authClient.getSession()
+
+      if (session?.data?.user) {
+        const userRole = (session.data.user as any)?.role as Role
+
+        if (redirectTo) {
+          router.replace(redirectTo)
+        } else {
+          if (userRole === "ADMIN") {
+            router.replace("/admin/dashboard")
+          } else if (userRole === "EMPLOYEE") {
+            router.replace("/employee/dashboard")
+          } else {
+            router.refresh()
+          }
+        }
+      }
+    }
+
+    checkSession()
+  }, [])
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // ⛔ Rate limiting
+  const [attempts, setAttempts] = useState(0)
+  const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
 
   const showSignup = role === "CUSTOMER"
 
@@ -43,6 +79,12 @@ export default function LoginForm({
     e.preventDefault()
 
     if (loading) return
+
+    // ⛔ block if too many attempts
+    if (blockedUntil && Date.now() < blockedUntil) {
+      setError("Too many attempts. Try again later.")
+      return
+    }
 
     setError("")
 
@@ -60,17 +102,32 @@ export default function LoginForm({
       const result = await authClient.signIn.email({
         email: cleanEmail,
         password: cleanPassword,
+         rememberMe: remember, // 🧠 remember me
       })
 
-      if (result?.error) {
-        setError(result.error.message || "Invalid credentials")
+      if (!result || result.error) {
+        const newAttempts = attempts + 1
+        setAttempts(newAttempts)
+
+        // ⛔ lock after 5 attempts
+        if (newAttempts >= 5) {
+          setBlockedUntil(Date.now() + 60 * 1000) // 1 min block
+          setError("Too many failed attempts. Try again in 1 minute.")
+        } else {
+          setError(result?.error?.message || "Invalid credentials")
+        }
+
         return
       }
 
-      const user = result?.data?.user
+      // ✅ success → reset attempts
+      setAttempts(0)
+      setBlockedUntil(null)
+
+      const user = result.data?.user
       const userRole = (user as any)?.role as Role
 
-      // 🔐 Frontend role guard
+      // 🔐 Role guard
       if (role && userRole !== role) {
         setError("Unauthorized access for this panel")
         return
@@ -79,7 +136,7 @@ export default function LoginForm({
       close()
       onSuccess?.()
 
-      // 🧠 Auto redirect by role
+      // 🚀 redirect
       if (redirectTo) {
         router.push(redirectTo)
       } else {
@@ -93,7 +150,7 @@ export default function LoginForm({
       }
 
     } catch (err) {
-      console.error(err)
+      console.error("Login error:", err)
       setError("Something went wrong. Please try again.")
     } finally {
       if (isMounted.current) {
@@ -130,10 +187,22 @@ export default function LoginForm({
       <div>
         <Label>Password</Label>
         <PasswordInput
-          value={password}
+          value={password}          
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
         />
+      </div>
+
+      {/* 🧠 Remember me */}
+      <div className="flex items-center justify-between text-sm">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          Remember me
+        </label>
       </div>
 
       {error && (
@@ -146,7 +215,6 @@ export default function LoginForm({
         {loading ? "Logging in..." : title}
       </Button>
 
-      {/* Forgot password (only CUSTOMER) */}
       {role === "CUSTOMER" && (
         <p
           className="text-right text-sm text-blue-500 cursor-pointer hover:underline"
@@ -156,7 +224,6 @@ export default function LoginForm({
         </p>
       )}
 
-      {/* Signup (only CUSTOMER) */}
       {showSignup && (
         <p className="text-center text-sm text-muted-foreground">
           Don’t have an account?{" "}

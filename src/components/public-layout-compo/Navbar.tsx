@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Menu, X, User, CreditCard, Settings, ChevronDown } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -9,6 +10,8 @@ import { authClient } from "@/lib/auth-client"
 import { useAuthModal } from "@/store/useAuthModal"
 
 export function Navbar() {
+  const router = useRouter()
+
   const [open, setOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
 
@@ -17,10 +20,11 @@ export function Navbar() {
 
   const menuRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
+  const accountRef = useRef<HTMLDivElement>(null)
 
   const closeMenu = () => setOpen(false)
 
-  /* ---------------- Outside Click ---------------- */
+  /* ---------------- Outside Click (Mobile + Account) ---------------- */
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -31,17 +35,28 @@ export function Navbar() {
       ) {
         setOpen(false)
       }
+
+      if (
+        accountRef.current &&
+        !accountRef.current.contains(event.target as Node)
+      ) {
+        setAccountOpen(false)
+      }
     }
 
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  /* ---------------- Logout ---------------- */
   const handleLogout = async () => {
-  await authClient.signOut()
-  setAccountOpen(false)
-  closeMenu()
-}
+    await authClient.signOut()
+
+    setAccountOpen(false)
+    closeMenu()
+
+    router.refresh() // ✅ important
+  }
 
   return (
     <nav className="w-full border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
@@ -58,10 +73,10 @@ export function Navbar() {
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-4">
 
-          {/* ---------------- SESSION LOADING SKELETON ---------------- */}
+          {/* Loading */}
           {isPending && <SessionSkeleton />}
 
-          {/* ---------------- NOT LOGGED IN ---------------- */}
+          {/* Not Logged In */}
           {!isPending && !session && (
             <>
               <Button variant="outline" onClick={() => openModal("login")}>
@@ -73,20 +88,17 @@ export function Navbar() {
             </>
           )}
 
-          {/* ---------------- LOGGED IN ---------------- */}
+          {/* Logged In */}
           {!isPending && session && (
-            <div
-              className="relative"
-              onMouseEnter={() => setAccountOpen(true)}
-              onMouseLeave={() => setAccountOpen(false)}
-            >
+            <div ref={accountRef} className="relative">
               <Button
                 variant="outline"
                 className="flex items-center gap-2 px-4"
+                onClick={() => setAccountOpen((prev) => !prev)}
               >
                 <User size={18} />
                 <span className="whitespace-nowrap max-w-[150px] truncate">
-                  {session.user?.name ?? session.user?.email}
+                  {session.user?.name || session.user?.email}
                 </span>
 
                 <motion.div
@@ -106,16 +118,16 @@ export function Navbar() {
                     transition={{ duration: 0.18 }}
                     className="absolute right-0 mt-2 w-52 bg-popover border rounded-2xl shadow-xl z-50 overflow-hidden"
                   >
-                    <DropdownItem href="/profile" icon={<User size={16} />}>
-                      Profile
+                    <DropdownItem href="/profile" onClick={() => setAccountOpen(false)}>
+                      <User size={16} /> Profile
                     </DropdownItem>
 
-                    <DropdownItem href="/transactions" icon={<CreditCard size={16} />}>
-                      Transactions
+                    <DropdownItem href="/transactions" onClick={() => setAccountOpen(false)}>
+                      <CreditCard size={16} /> Transactions
                     </DropdownItem>
 
-                    <DropdownItem href="/settings" icon={<Settings size={16} />}>
-                      Settings
+                    <DropdownItem href="/settings" onClick={() => setAccountOpen(false)}>
+                      <Settings size={16} /> Settings
                     </DropdownItem>
 
                     <div className="border-t" />
@@ -146,7 +158,7 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* ---------------- MOBILE MENU ---------------- */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -209,7 +221,7 @@ export function Navbar() {
   )
 }
 
-/* ---------------- Skeleton Components ---------------- */
+/* ---------------- Components ---------------- */
 
 function SessionSkeleton() {
   return (
@@ -229,21 +241,18 @@ function MobileSkeleton() {
   )
 }
 
-/* ---------------- Reusable Components ---------------- */
-
 function DropdownItem({
   href,
-  icon,
   children,
+  onClick,
 }: {
   href: string
-  icon: React.ReactNode
   children: React.ReactNode
+  onClick?: () => void
 }) {
   return (
-    <Link href={href}>
+    <Link href={href} onClick={onClick}>
       <div className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition cursor-pointer">
-        {icon}
         {children}
       </div>
     </Link>
