@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +9,8 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   name          String?
-  email         String    @unique  
+  email         String    @unique
+  mobile        String?   // New field for phone number  
   role          Role      @default(CUSTOMER)
   emailVerified Boolean   @default(false)
   createdAt     DateTime  @default(now())
@@ -52,7 +52,7 @@ model Account {
   updatedAt             DateTime  @updatedAt
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  password String?
+  password String? // Store hashed password for email login
 
   @@index([userId])
   @@map("account")
