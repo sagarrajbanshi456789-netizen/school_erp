@@ -3,19 +3,20 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"  
+  provider = "postgresql"
 }
 
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
-  mobile        String?   // New field for phone number  
+  mobile        String?
   role          Role      @default(CUSTOMER)
   emailVerified Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   image         String?
+
   accounts      Account[]
   sessions      Session[]
 
@@ -30,8 +31,9 @@ model Session {
   updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("session")
@@ -42,17 +44,20 @@ model Account {
   accountId             String
   providerId            String
   userId                String
+
   accessToken           String?
   refreshToken          String?
   idToken               String?
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
   scope                 String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  password String? // Store hashed password for email login
+  password String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("account")
@@ -74,4 +79,67 @@ enum Role {
   ADMIN
   EMPLOYEE
   CUSTOMER
+}
+
+//////////////////////////////////////////////////////
+// Academic CMS Models
+//////////////////////////////////////////////////////
+
+model Level {
+  id      String  @id @default(cuid())
+  name    String
+  slug    String  @unique
+
+  classes Class[]
+  books   Book[]
+}
+
+model Class {
+  id      String @id @default(cuid())
+  name    String
+  slug    String
+
+  levelId String
+  level   Level  @relation(fields: [levelId], references: [id])
+
+  subjects Subject[]
+  books    Book[]
+
+  @@unique([slug, levelId])
+}
+
+model Subject {
+  id      String @id @default(cuid())
+  name    String
+  slug    String
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
+
+  publications Publication[]
+
+  @@unique([slug, classId])
+}
+
+model Publication {
+  id          String @id @default(cuid())
+  title       String
+  description String
+  href        String
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+}
+
+model Book {
+  id     String @id @default(cuid())
+  title  String
+  author String
+  href   String
+
+  levelId String
+  level   Level  @relation(fields: [levelId], references: [id])
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
 }

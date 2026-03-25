@@ -12,6 +12,7 @@ import {
   IdCard,
   MessageSquare,
   LogOutIcon,
+  BookOpen,
 } from 'lucide-react'
 
 interface User {
@@ -44,6 +45,7 @@ export default function Sidebar({
     { title: 'Users', href: '/admin/dashboard/users', icon: UsersIcon },
     { title: 'Employees', href: '/admin/dashboard/employees', icon: IdCard },
     { title: 'Inbox', href: '/admin/dashboard/inbox', icon: MessageSquare },
+    { title: 'Add Publication', href: '/admin/dashboard/add-publication', icon: BookOpen },
     { title: 'Settings', href: '/admin/dashboard/settings', icon: SettingsIcon },
   ]
 
