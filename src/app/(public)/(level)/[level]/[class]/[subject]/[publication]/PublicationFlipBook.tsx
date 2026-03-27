@@ -1,3 +1,4 @@
+// app/(public)/(level)/[level]/[class]/[subject]/[publication]/PublicationFlipBook.tsx
 "use client"
 
 import React, { useRef, useState } from "react"
@@ -9,7 +10,8 @@ import BackCover from "@/components/publication/BackCover"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-interface PageData {
+/* ---------------- TYPE DEFINITIONS ---------------- */
+export interface PageData {
   id: string
   pageNumber: number
   content: string | null
@@ -63,9 +65,9 @@ const Page = React.forwardRef<
 
 Page.displayName = "Page"
 
-/* ===== BOOK ===== */
+/* ===== BOOK COMPONENT ===== */
 export default function PublicationFlipBook({ pages, title }: Props) {
-  const bookRef = useRef<any>(null)
+  const bookRef = useRef<HTMLFlipBook>(null)
 
   /* Zoom */
   const [zoom, setZoom] = useState(1)
@@ -88,7 +90,7 @@ export default function PublicationFlipBook({ pages, title }: Props) {
       return
     }
 
-    const pageFlip = bookRef.current.pageFlip()
+    const pageFlip = bookRef.current
     const total = pageFlip.getPageCount()
 
     if (pageNumber < 1 || pageNumber > total - 2) {
@@ -106,13 +108,15 @@ export default function PublicationFlipBook({ pages, title }: Props) {
     <div className="flex flex-col items-center gap-4">
       {/* BOOK */}
       <div className="perspective-[1600px]" style={{ transform: `scale(${zoom})` }}>
+        {/* @ts-ignore: react-pageflip has incomplete TS types */}
         <HTMLFlipBook
-          ref={bookRef}
+          ref={bookRef as any}
           width={450}
           height={650}
-          className="shadow-2xl transform-style-preserve-3d transition-transform duration-150 ease-out"
           showCover
-          onFlip={(e: any) => setCurrentPage(e.data)}
+          startPage={0}
+          className="shadow-2xl transform-style-preserve-3d transition-transform duration-150 ease-out"
+          onFlip={(e: { data: number }) => setCurrentPage(e.data)}
         >
           {/* Front Cover */}
           <Page index={0} isCover>
@@ -128,7 +132,10 @@ export default function PublicationFlipBook({ pages, title }: Props) {
 
           {/* Back Cover */}
           <Page index={pages.length + 1} isCover>
-            <BackCover description="This publication is designed for learning." footer="School ERP" />
+            <BackCover
+              description="This publication is designed for learning."
+              footer="School ERP"
+            />
           </Page>
         </HTMLFlipBook>
       </div>
@@ -142,9 +149,15 @@ export default function PublicationFlipBook({ pages, title }: Props) {
       <div className="flex flex-wrap gap-3 items-center justify-center">
         {/* Zoom */}
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={zoomOut}>−</Button>
-          <Button size="sm" variant="outline" onClick={resetZoom}>Reset</Button>
-          <Button size="sm" variant="outline" onClick={zoomIn}>+</Button>
+          <Button size="sm" variant="outline" onClick={zoomOut}>
+            −
+          </Button>
+          <Button size="sm" variant="outline" onClick={resetZoom}>
+            Reset
+          </Button>
+          <Button size="sm" variant="outline" onClick={zoomIn}>
+            +
+          </Button>
         </div>
 
         {/* Jump Page */}
@@ -162,7 +175,9 @@ export default function PublicationFlipBook({ pages, title }: Props) {
             }}
             className="w-24"
           />
-          <Button size="sm" onClick={goToPage}>Go</Button>
+          <Button size="sm" onClick={goToPage}>
+            Go
+          </Button>
         </div>
       </div>
 

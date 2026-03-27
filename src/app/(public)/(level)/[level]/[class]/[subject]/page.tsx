@@ -12,7 +12,19 @@ interface PageProps {
 }
 
 export default async function SubjectPage({ params }: PageProps) {
-  const { level: levelSlug, class: classSlug, subject: subjectSlug } = params
+  // Unwrap params (if using Promise-based params in App Router)
+  const { level: levelSlug, class: classSlug, subject: subjectSlug } = await params
+
+  if (!levelSlug || !classSlug || !subjectSlug) {
+    return (
+      <LevelTemplate
+        title="Invalid URL"
+        description="Missing level, class, or subject"
+        cards={[]}
+        showBackButton
+      />
+    )
+  }
 
   // Get Level
   const level = await prisma.level.findUnique({
@@ -30,13 +42,11 @@ export default async function SubjectPage({ params }: PageProps) {
     )
   }
 
-  // Get Class
-  const cls = await prisma.class.findUnique({
+  // Get Class (using compound unique if defined in schema)
+  const cls = await prisma.class.findFirst({
     where: {
-      slug_levelId: {
-        slug: classSlug,
-        levelId: level.id,
-      },
+      slug: classSlug,
+      levelId: level.id,
     },
   })
 
@@ -51,18 +61,16 @@ export default async function SubjectPage({ params }: PageProps) {
     )
   }
 
-  // Get Subject with publications
-  const subject = await prisma.subject.findUnique({
+  // Get Subject with publications and pages
+  const subject = await prisma.subject.findFirst({
     where: {
-      slug_classId: {
-        slug: subjectSlug,
-        classId: cls.id,
-      },
+      slug: subjectSlug,
+      classId: cls.id,
     },
     include: {
       publications: {
         include: {
-          pages: true, // include pages for flipbook
+          pages: true,
         },
       },
     },
@@ -79,12 +87,12 @@ export default async function SubjectPage({ params }: PageProps) {
     )
   }
 
-  // Create Cards for all publications
+  // Map publications to cards
   const cards = subject.publications.map((pub) => ({
     id: pub.id,
     title: pub.title,
     description: pub.description || "Open Publication",
-    href: `/${levelSlug}/${classSlug}/${subjectSlug}/${pub.slug}`, // SEO-friendly URL
+    href: `/${levelSlug}/${classSlug}/${subjectSlug}/${pub.slug}`,
   }))
 
   return (
