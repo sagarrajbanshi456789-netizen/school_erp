@@ -6,6 +6,10 @@ datasource db {
   provider = "postgresql"
 }
 
+//////////////////////////////////////////////////////
+// Auth Models
+//////////////////////////////////////////////////////
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -91,7 +95,6 @@ model Level {
   slug    String  @unique
 
   classes Class[]
-  books   Book[]
 }
 
 model Class {
@@ -103,7 +106,6 @@ model Class {
   level   Level  @relation(fields: [levelId], references: [id])
 
   subjects Subject[]
-  books    Book[]
 
   @@unique([slug, levelId])
 }
@@ -122,24 +124,32 @@ model Subject {
 }
 
 model Publication {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
+  slug        String   @unique
   description String
   href        String
+  author      String?  // optional author for flipbook
 
-  subjectId String
-  subject   Subject @relation(fields: [subjectId], references: [id])
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+
+  pages       PublicationPage[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-model Book {
-  id     String @id @default(cuid())
-  title  String
-  author String
-  href   String
+model PublicationPage {
+  id            String @id @default(cuid())
+  pageNumber    Int
+  title         String?
+  content       String  @db.Text
 
-  levelId String
-  level   Level  @relation(fields: [levelId], references: [id])
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id])
 
-  classId String
-  class   Class  @relation(fields: [classId], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@unique([publicationId, pageNumber])
 }
