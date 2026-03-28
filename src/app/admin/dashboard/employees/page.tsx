@@ -2,8 +2,8 @@ import { prisma } from "@/lib/prisma"
 import AddEmployeeDialog from "@/components/employee/AddEmployeeDialog"
 import EditEmployeeDialog from "@/components/employee/EditEmployeeDialog"
 import DeleteEmployeeDialog from "@/components/employee/DeleteEmployeeDialog"
-import { Prisma } from "@/app/generated/prisma/browser"
-
+import { Prisma } from "@prisma/client"
+import AssignBooksDialog from "@/components/employee/AssignBooksDialog"
 type Props = {
   searchParams: Promise<{
     search?: string
@@ -25,16 +25,20 @@ export default async function EmployeesPage({ searchParams }: Props) {
       { email: { contains: search, mode: "insensitive" } },
     ],
   }
-  const [employees, total] = await Promise.all([
+  const [employees, publications, assigned, total] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
+
+    prisma.publication.findMany(),
+
+    prisma.assignedBook.findMany(),
+
     prisma.user.count({ where }),
   ])
-
   const totalPages = Math.ceil(total / pageSize)
 
   return (
@@ -139,6 +143,15 @@ export default async function EmployeesPage({ searchParams }: Props) {
 
                     {/* Actions */}
                     <td className="p-3 text-right space-x-3">
+                      <AssignBooksDialog
+                        employeeId={emp.id}
+                        publications={publications}
+                        assigned={assigned
+                          .filter(a => a.employeeId === emp.id)
+                          .map(a => a.publicationId)
+                        }
+                      />
+
                       <EditEmployeeDialog employee={emp} />
                       <DeleteEmployeeDialog id={emp.id} />
                     </td>

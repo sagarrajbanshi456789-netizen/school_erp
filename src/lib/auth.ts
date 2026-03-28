@@ -18,7 +18,7 @@ const NEXT_PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost
 export const auth = betterAuth({
 	database: prismaAdapter(prisma, { provider: "postgresql" }),
 
-	secret: BETTER_AUTH_SECRET, 
+	secret: BETTER_AUTH_SECRET,
 
 	baseURL: process.env.NEXT_PUBLIC_APP_URL,
 
@@ -26,7 +26,20 @@ export const auth = betterAuth({
 		"http://localhost:3000",
 		NEXT_PUBLIC_APP_URL,
 	].filter(Boolean), // Remove any empty strings
-
+	user: {
+		additionalFields: {
+			role: {
+				type: "string",
+			},
+		},
+	},
+	session: {
+		additionalFields: {
+			role: {
+				type: "string",
+			},
+		},
+	},
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: true,
@@ -38,7 +51,7 @@ export const auth = betterAuth({
 		autoSignInAfterVerification: true,
 
 		sendVerificationEmail: async ({ user, url, token }, request) => {
-      		console.log("\n" + "=".repeat(70))
+			console.log("\n" + "=".repeat(70))
 			console.log("📧 EMAIL VERIFICATION CALLBACK FIRED")
 			console.log("=".repeat(70))
 			console.log("⏰ Time:", new Date().toISOString())
@@ -63,11 +76,11 @@ export const auth = betterAuth({
 				const tokens = await prisma.verification.findMany()
 				console.log("SERVER DEBUG: users in DB =", users.length, "users")
 				console.log("SERVER DEBUG: verification tokens =", tokens.length, "tokens")
-        await sendVerificationEmail({
-          to: user.email,
-          url,
-        })
-        console.log("✅ Email sent successfully")
+				await sendVerificationEmail({
+					to: user.email,
+					url,
+				})
+				console.log("✅ Email sent successfully")
 			} catch (dbErr) {
 				console.error("SERVER DEBUG: DB query failed:", dbErr)
 			}

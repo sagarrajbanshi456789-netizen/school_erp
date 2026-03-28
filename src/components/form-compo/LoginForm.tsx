@@ -1,3 +1,4 @@
+// src/components/form-compo/LoginForm.tsx
 "use client"
 
 import { useState, useRef, useEffect } from "react"
@@ -10,6 +11,7 @@ import { authClient } from "@/lib/auth-client"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import PasswordInput from "@/components/password/password-input"
 
 type Role = "ADMIN" | "EMPLOYEE" | "CUSTOMER"
@@ -43,25 +45,29 @@ export default function LoginForm({
     const checkSession = async () => {
       const session = await authClient.getSession()
 
-      if (session?.data?.user) {
-        const userRole = (session.data.user as any)?.role as Role
+      const user = session?.data?.user
+      if (!user) return
 
-        if (redirectTo) {
-          router.replace(redirectTo)
+      const userRole = (user as any)?.role as Role
+
+      // 🔐 Role check
+      if (role && userRole !== role) return
+
+      if (redirectTo) {
+        router.replace(redirectTo)
+      } else {
+        if (userRole === "ADMIN") {
+          router.replace("/admin/dashboard")
+        } else if (userRole === "EMPLOYEE") {
+          router.replace("/employee/dashboard")
         } else {
-          if (userRole === "ADMIN") {
-            router.replace("/admin/dashboard")
-          } else if (userRole === "EMPLOYEE") {
-            router.replace("/employee/dashboard")
-          } else {
-            router.refresh()
-          }
+          router.refresh()
         }
       }
     }
 
     checkSession()
-  }, [])
+  }, [role, redirectTo, router])
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -102,16 +108,15 @@ export default function LoginForm({
       const result = await authClient.signIn.email({
         email: cleanEmail,
         password: cleanPassword,
-         rememberMe: remember, // 🧠 remember me
+        rememberMe: remember,
       })
 
       if (!result || result.error) {
         const newAttempts = attempts + 1
         setAttempts(newAttempts)
 
-        // ⛔ lock after 5 attempts
         if (newAttempts >= 5) {
-          setBlockedUntil(Date.now() + 60 * 1000) // 1 min block
+          setBlockedUntil(Date.now() + 60 * 1000)
           setError("Too many failed attempts. Try again in 1 minute.")
         } else {
           setError(result?.error?.message || "Invalid credentials")
@@ -120,14 +125,16 @@ export default function LoginForm({
         return
       }
 
-      // ✅ success → reset attempts
+      // ✅ Reset attempts
       setAttempts(0)
       setBlockedUntil(null)
 
       const user = result.data?.user
       const userRole = (user as any)?.role as Role
-
-      // 🔐 Role guard
+console.log("User:", user)
+console.log("User role:", userRole)
+console.log("Required role:", role)
+      // 🔐 Role Guard
       if (role && userRole !== role) {
         setError("Unauthorized access for this panel")
         return
@@ -136,7 +143,7 @@ export default function LoginForm({
       close()
       onSuccess?.()
 
-      // 🚀 redirect
+      // 🚀 Redirect
       if (redirectTo) {
         router.push(redirectTo)
       } else {
@@ -187,7 +194,7 @@ export default function LoginForm({
       <div>
         <Label>Password</Label>
         <PasswordInput
-          value={password}          
+          value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
         />
@@ -196,10 +203,9 @@ export default function LoginForm({
       {/* 🧠 Remember me */}
       <div className="flex items-center justify-between text-sm">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
+            onCheckedChange={(checked) => setRemember(!!checked)}
           />
           Remember me
         </label>
@@ -211,7 +217,11 @@ export default function LoginForm({
         </p>
       )}
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={loading}
+      >
         {loading ? "Logging in..." : title}
       </Button>
 

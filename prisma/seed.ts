@@ -3,11 +3,9 @@
 import "dotenv/config"
 import { PrismaClient } from "@prisma/client"
 import { withAccelerate } from "@prisma/extension-accelerate"
+import { auth } from "../src/lib/auth"
 
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL,
-}).$extends(withAccelerate())
-
+const prisma = new PrismaClient({ accelerateUrl: process.env.DATABASE_URL, }).$extends(withAccelerate())
 /* --------------------- */
 /* Utils */
 /* --------------------- */
@@ -79,6 +77,39 @@ function generatePageContent(
 
 async function main() {
   console.log("🌱 Seeding database...")
+
+  /* --------------------- */
+/* Seed Admin Account */
+/* --------------------- */
+
+const adminEmail = process.env.ADMIN_EMAIL || "admin@school.com"
+const adminPassword = process.env.ADMIN_PASSWORD || "admin123"
+
+const existingAdmin = await prisma.user.findUnique({
+  where: { email: adminEmail },
+})
+
+if (!existingAdmin) {
+  await auth.api.signUpEmail({
+    body: {
+      email: adminEmail,
+      password: adminPassword,
+      name: "Super Admin",
+      role: "ADMIN",
+    },
+  })
+
+  // make admin role
+  await prisma.user.update({
+    where: { email: adminEmail },
+    data: {
+      role: "ADMIN",
+      emailVerified: true,
+    },
+  })
+
+  console.log("✅ Admin account created")
+}
 
   /* --------------------- */
   /* Levels */
@@ -201,8 +232,7 @@ async function main() {
 
   for (const cls of allClasses) {
     const subjects =
-      classSubjectsMap[cls.name] ||
-      ["Math", "Science", "English"]
+      classSubjectsMap[cls.name] || ["Math", "Science", "English"]
 
     for (const subject of subjects) {
       await prisma.subject.upsert({
@@ -229,9 +259,7 @@ async function main() {
   /* --------------------- */
 
   const allSubjects = await prisma.subject.findMany({
-    include: {
-      class: true,
-    },
+    include: { class: true },
   })
 
   for (const subject of allSubjects) {
@@ -242,7 +270,6 @@ async function main() {
     if (!level) continue
 
     /* Create 2 books per subject */
-
     for (let book = 1; book <= 2; book++) {
       const title = `${subject.name} Book ${book}`
       const slug = slugify(title)
@@ -261,7 +288,6 @@ async function main() {
       })
 
       /* Create 20 pages */
-
       for (let i = 1; i <= 20; i++) {
         await prisma.publicationPage.upsert({
           where: {
@@ -274,11 +300,7 @@ async function main() {
           create: {
             pageNumber: i,
             title: `Page ${i}`,
-            content: generatePageContent(
-              subject.name,
-              subject.class.name,
-              i
-            ),
+            content: generatePageContent(subject.name, subject.class.name, i),
             publicationId: publication.id,
           },
         })

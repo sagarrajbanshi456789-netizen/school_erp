@@ -14,12 +14,17 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
-  mobile        String?
+  phone         String?
   role          Role      @default(CUSTOMER)
   emailVerified Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   image         String?
+  assignedBooks AssignedBook[]
+   location      String?
+  device        String?
+  isOnline      Boolean   @default(false)
+  lastSeen      DateTime?
 
   accounts      Account[]
   sessions      Session[]
@@ -130,6 +135,7 @@ model Publication {
   description String
   href        String
   author      String?  // optional author for flipbook
+  assignedTo  AssignedBook[]
 
   subjectId   String
   subject     Subject  @relation(fields: [subjectId], references: [id])
@@ -152,4 +158,17 @@ model PublicationPage {
   createdAt     DateTime @default(now())
 
   @@unique([publicationId, pageNumber])
+}
+model AssignedBook {
+  id            String   @id @default(cuid())
+
+  employeeId    String
+  publicationId String
+
+  employee      User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now())
+
+  @@unique([employeeId, publicationId])
 }
