@@ -1,3 +1,4 @@
+// src/app/employee/page.tsx
 import LoginForm from "@/components/form-compo/LoginForm"
 
 export default function EmployeeLoginPage() {

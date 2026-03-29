@@ -1,9 +1,12 @@
+// src/app/admin/dashboard/employees/page.tsx
 import { prisma } from "@/lib/prisma"
 import AddEmployeeDialog from "@/components/employee/AddEmployeeDialog"
 import EditEmployeeDialog from "@/components/employee/EditEmployeeDialog"
 import DeleteEmployeeDialog from "@/components/employee/DeleteEmployeeDialog"
-import { Prisma } from "@prisma/client"
 import AssignBooksDialog from "@/components/employee/AssignBooksDialog"
+import ResetEmployeePasswordDialog from "@/components/employee/ResetEmployeePasswordDialog"
+import { Prisma } from "@prisma/client"
+
 type Props = {
   searchParams: Promise<{
     search?: string
@@ -18,6 +21,7 @@ export default async function EmployeesPage({ searchParams }: Props) {
   const search = params?.search || ""
   const page = Number(params?.page || 1)
   const pageSize = 5
+
   const where: Prisma.UserWhereInput = {
     role: "EMPLOYEE",
     OR: [
@@ -25,6 +29,7 @@ export default async function EmployeesPage({ searchParams }: Props) {
       { email: { contains: search, mode: "insensitive" } },
     ],
   }
+
   const [employees, publications, assigned, total] = await Promise.all([
     prisma.user.findMany({
       where,
@@ -39,6 +44,7 @@ export default async function EmployeesPage({ searchParams }: Props) {
 
     prisma.user.count({ where }),
   ])
+
   const totalPages = Math.ceil(total / pageSize)
 
   return (
@@ -58,7 +64,6 @@ export default async function EmployeesPage({ searchParams }: Props) {
             />
           </form>
 
-
           <AddEmployeeDialog />
         </div>
       </div>
@@ -70,95 +75,174 @@ export default async function EmployeesPage({ searchParams }: Props) {
             <thead className="bg-gray-100 text-left">
               <tr>
                 <th className="p-3">Employee</th>
+                <th className="p-3">Verified</th>
                 <th className="p-3">Contact</th>
                 <th className="p-3">Location</th>
                 <th className="p-3">Device</th>
+                <th className="p-3">Books</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Last Seen</th>
+                <th className="p-3">Created</th>
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
 
-
             <tbody>
               {employees.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-gray-500">
+                  <td colSpan={10} className="p-6 text-center text-gray-500">
                     No employees found
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => (
-                  <tr key={emp.id} className="border-t hover:bg-gray-50">
+                employees.map((emp) => {
 
-                    {/* Employee Info */}
-                    <td className="p-3 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold">
-                        {emp.name?.charAt(0).toUpperCase() || "E"}
-                      </div>
+                  const assignedCount = assigned.filter(
+                    (a) => a.employeeId === emp.id
+                  ).length
 
-                      <div>
-                        <p className="font-medium">{emp.name}</p>
-                        <p className="text-gray-500 text-xs">{emp.email}</p>
-                      </div>
-                    </td>
+                  const inactive =
+                    emp.lastSeen &&
+                    Date.now() - new Date(emp.lastSeen).getTime() >
+                    7 * 24 * 60 * 60 * 1000
 
-                    {/* Contact */}
-                    <td className="p-3">
-                      {emp.phone || <span className="text-gray-400">N/A</span>}
-                    </td>
+                  return (
+                    <tr key={emp.id} className="border-t hover:bg-gray-50">
 
-                    {/* Location */}
-                    <td className="p-3">
-                      {emp.location || <span className="text-gray-400">Unknown</span>}
-                    </td>
+                      {/* Employee */}
+                      <td className="p-3 flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold">
+                            {emp.name?.charAt(0).toUpperCase() || "E"}
+                          </div>
 
-                    {/* Device */}
-                    <td className="p-3 flex items-center gap-2">
-                      {emp.device === "Mobile" && "📱"}
-                      {emp.device === "Windows" && "💻"}
-                      {emp.device === "Mac" && "🖥️"}
-                      {emp.device || "—"}
-                    </td>
+                          <span
+                            className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                              emp.isOnline ? "bg-green-500" : "bg-gray-400"
+                            }`}
+                          />
+                        </div>
 
+                        <div>
+                          <p className="font-medium">{emp.name}</p>
+                          <p className="text-gray-500 text-xs">{emp.email}</p>
+                        </div>
+                      </td>
 
-                    {/* Online Status */}
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full font-medium ${emp.isOnline
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-200 text-gray-600"
+                      {/* Verified */}
+                      <td className="p-3 text-xs space-y-1">
+                        <div>
+                          Email:
+                          <span
+                            className={`ml-1 px-2 py-0.5 rounded ${
+                              emp.emailVerified
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-600"
+                            }`}
+                          >
+                            {emp.emailVerified ? "Verified" : "Unverified"}
+                          </span>
+                        </div>
+
+                        <div>
+                          Phone:
+                          <span
+                            className={`ml-1 px-2 py-0.5 rounded ${
+                              emp.phone
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-200 text-gray-600"
+                            }`}
+                          >
+                            {emp.phone ? "Added" : "Missing"}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="p-3">
+                        {emp.phone || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </td>
+
+                      {/* Location */}
+                      <td className="p-3">
+                        {emp.location || (
+                          <span className="text-gray-400">Unknown</span>
+                        )}
+                      </td>
+
+                      {/* Device */}
+                      <td className="p-3 flex items-center gap-2">
+                        {emp.device === "Mobile" && "📱"}
+                        {emp.device === "Windows" && "💻"}
+                        {emp.device === "Mac" && "🖥️"}
+                        {emp.device || "—"}
+                      </td>
+
+                      {/* Books */}
+                      <td className="p-3">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                          {assignedCount} Books
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full font-medium ${
+                            emp.isOnline
+                              ? "bg-green-100 text-green-700"
+                              : inactive
+                              ? "bg-red-100 text-red-600"
+                              : "bg-gray-200 text-gray-600"
                           }`}
-                      >
-                        {emp.isOnline ? "Online" : "Offline"}
-                      </span>
-                    </td>
+                        >
+                          {emp.isOnline
+                            ? "Online"
+                            : inactive
+                            ? "Inactive"
+                            : "Offline"}
+                        </span>
+                      </td>
 
-                    {/* Last Seen */}
-                    <td className="p-3 text-sm text-gray-600">
-                      {emp.lastSeen
-                        ? new Date(emp.lastSeen).toLocaleString()
-                        : "Never"}
-                    </td>
+                      {/* Last Seen */}
+                      <td className="p-3 text-sm text-gray-600">
+                        {emp.lastSeen
+                          ? new Date(emp.lastSeen).toLocaleString()
+                          : "Never"}
+                      </td>
 
-                    {/* Actions */}
-                    <td className="p-3 text-right space-x-3">
-                      <AssignBooksDialog
-                        employeeId={emp.id}
-                        publications={publications}
-                        assigned={assigned
-                          .filter(a => a.employeeId === emp.id)
-                          .map(a => a.publicationId)
-                        }
-                      />
+                      {/* Created */}
+                      <td className="p-3 text-sm text-gray-600">
+                        {new Date(emp.createdAt).toLocaleDateString()}
+                      </td>
 
-                      <EditEmployeeDialog employee={emp} />
-                      <DeleteEmployeeDialog id={emp.id} />
-                    </td>
+                      {/* Actions */}
+                      <td className="p-3 text-right space-x-2">
 
-                  </tr>
+                        <AssignBooksDialog
+                          employeeId={emp.id}
+                          publications={publications}
+                          assigned={assigned
+                            .filter(a => a.employeeId === emp.id)
+                            .map(a => a.publicationId)
+                          }
+                        />
 
-                ))
+                        <ResetEmployeePasswordDialog
+                          employeeId={emp.id}
+                          employeeName={emp.name || "Employee"}
+                        />
+
+                        <EditEmployeeDialog employee={emp} />
+                        <DeleteEmployeeDialog id={emp.id} />
+
+                      </td>
+
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -191,6 +275,7 @@ export default async function EmployeesPage({ searchParams }: Props) {
           )}
         </div>
       </div>
+
     </div>
   )
 }

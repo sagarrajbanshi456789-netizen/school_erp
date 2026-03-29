@@ -1,8 +1,10 @@
+// src/lib/actions/employeeActions.ts
 "use server";
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 /**
  * ✅ CREATE EMPLOYEE
@@ -17,6 +19,7 @@ export async function createEmployee(data: {
     throw new Error("Name and Email required");
   }
 
+  // Check existing user
   const existing = await prisma.user.findUnique({
     where: { email: data.email },
   });
@@ -24,6 +27,9 @@ export async function createEmployee(data: {
   if (existing) {
     throw new Error("Email already exists");
   }
+
+  // ✅ Generate Temp Password
+  const tempPassword = crypto.randomBytes(5).toString("hex");
 
   const user = await prisma.user.create({
     data: {
@@ -35,11 +41,10 @@ export async function createEmployee(data: {
     },
   });
 
-  // Optional default password
-  const defaultPassword = "123456";
+  // Hash temp password
+  const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-  const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-
+  // Create credential account
   await prisma.account.create({
     data: {
       userId: user.id,
@@ -50,6 +55,11 @@ export async function createEmployee(data: {
   });
 
   revalidatePath("/admin/dashboard/employees");
+
+  return {
+    success: true,
+    tempPassword, // return temp password
+  };
 }
 
 
@@ -92,4 +102,49 @@ export async function deleteEmployee(userId: string) {
   });
 
   revalidatePath("/admin/dashboard/employees");
+}
+
+
+/**
+ * ✅ RESET EMPLOYEE PASSWORD
+ */
+
+function generateTempPassword() {
+  const chars =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+  let password = "";
+
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(
+      Math.floor(Math.random() * chars.length)
+    );
+  }
+
+  return password;
+}
+
+export async function resetEmployeePassword(
+  employeeId: string
+) {
+  const tempPassword = generateTempPassword();
+
+  const hashedPassword = await bcrypt.hash(
+    tempPassword,
+    10
+  );
+
+  await prisma.account.updateMany({
+    where: {
+      userId: employeeId,
+      providerId: "credentials",
+    },
+    data: {
+      password: hashedPassword,
+    },
+  });
+
+  revalidatePath("/admin/dashboard/employees");
+
+  return tempPassword;
 }

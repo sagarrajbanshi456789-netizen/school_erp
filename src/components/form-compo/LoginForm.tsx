@@ -128,20 +128,34 @@ export default function LoginForm({
       // ✅ Reset attempts
       setAttempts(0)
       setBlockedUntil(null)
+      const session = await authClient.getSession()
 
-      const user = result.data?.user
+      const user = session?.data?.user
       const userRole = (user as any)?.role as Role
-console.log("User:", user)
-console.log("User role:", userRole)
-console.log("Required role:", role)
+      console.log("Login result:", result)
+      console.log("Session:", session)
+      console.log("User:", user)
+      console.log("User role:", userRole)
+      console.log("Required role:", role)
+      // 🔐 Role Guard
+      if (role && userRole !== role) {
+        setError("Unauthorized access for this panel")
+        return
+      }
       // 🔐 Role Guard
       if (role && userRole !== role) {
         setError("Unauthorized access for this panel")
         return
       }
 
+
       close()
       onSuccess?.()
+      // 🔑 Temp password check
+      if ((user as any)?.tempPassword) {
+        router.push("/employee/change-password")
+        return
+      }
 
       // 🚀 Redirect
       if (redirectTo) {

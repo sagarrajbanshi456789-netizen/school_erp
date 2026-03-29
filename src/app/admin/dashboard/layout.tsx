@@ -15,7 +15,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, loading, logout } = useBetterAuth()
 
   if (loading) return <p>Loading...</p>
-  // if (!user || user.role !== 'ADMIN') return <p>Access denied</p>
+  console.log("Admin Layout user:", user)
+  if (!user || user.role !== 'ADMIN') return <p>Access denied</p>
 
   return (
     <>
