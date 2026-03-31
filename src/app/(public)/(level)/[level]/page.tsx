@@ -1,3 +1,4 @@
+// src/app/(public)/(level)/[level]/page.tsx
 import LevelTemplate from "../LevelTemplate"
 import { prisma } from "@/lib/prisma"
 import * as LucideIcons from "lucide-react"
@@ -67,7 +68,11 @@ export default async function LevelPage({ params }: PageProps) {
   return (
     <LevelTemplate
       title={level.name}
-      description={`Classes available in ${level.name}`}
+      description={
+        level.slug.toLowerCase() === "gaming"
+          ? "Select a game from the dashboard 🎮"
+          : `Classes available in ${level.name}`
+      }
       cards={cards}
       showBackButton
     />

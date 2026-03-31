@@ -124,3 +124,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+.neon-btn {
+  box-shadow: 0 0 10px rgba(34,211,238,0.6);
+}
+
+.neon-btn:hover {
+  box-shadow: 0 0 20px rgba(34,211,238,1);
+}
+
+.neon-badge {
+  box-shadow: 0 0 8px rgba(236,72,153,0.6);
+}

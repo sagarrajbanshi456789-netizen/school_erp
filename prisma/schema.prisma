@@ -108,6 +108,7 @@ model Class {
   slug    String
 
   levelId String
+  isGame  Boolean @default(false)
   level   Level  @relation(fields: [levelId], references: [id])
 
   subjects Subject[]

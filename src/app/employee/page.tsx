@@ -1,11 +1,5 @@
-// src/app/employee/page.tsx
-import LoginForm from "@/components/form-compo/LoginForm"
+import { redirect } from "next/navigation";
 
-export default function EmployeeLoginPage() {
-  return (
-    <LoginForm
-      title="Employee Login"      
-      role="EMPLOYEE"
-    />
-  )
+export default function EmployeePage() {
+  redirect("/employee/login");
 }

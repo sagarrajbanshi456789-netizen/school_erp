@@ -95,6 +95,9 @@ importers:
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
+      tic-tac-toe-minimax:
+        specifier: ^1.0.8
+        version: 1.0.8
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -5002,6 +5005,9 @@ packages:
   tar-stream@2.2.0:
     resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
     engines: {node: '>=6'}
+
+  tic-tac-toe-minimax@1.0.8:
+    resolution: {integrity: sha512-aDpyeAqdBkTkhaV2C26z61PKwiy3vLJP8k/n59HYhJaH4AmIkh4KlzwQljcEcatr7mT5X/aW8Q/8g/I50rY0Sw==}
 
   tiny-invariant@1.3.3:
     resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
@@ -10380,6 +10386,8 @@ snapshots:
       fs-constants: 1.0.0
       inherits: 2.0.4
       readable-stream: 3.6.2
+
+  tic-tac-toe-minimax@1.0.8: {}
 
   tiny-invariant@1.3.3: {}
 

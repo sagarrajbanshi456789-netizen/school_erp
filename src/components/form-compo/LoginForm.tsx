@@ -141,13 +141,7 @@ export default function LoginForm({
       if (role && userRole !== role) {
         setError("Unauthorized access for this panel")
         return
-      }
-      // 🔐 Role Guard
-      if (role && userRole !== role) {
-        setError("Unauthorized access for this panel")
-        return
-      }
-
+      }    
 
       close()
       onSuccess?.()

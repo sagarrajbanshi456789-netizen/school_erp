@@ -1,4 +1,4 @@
-// app/(public)/(level)/[level]/[class]/page.tsx
+// src/app/(public)/(level)/[level]/[class]/page.tsx
 
 import React from "react"
 import { prisma } from "@/lib/prisma"
@@ -47,6 +47,7 @@ export default async function ClassPage({ params }: PageProps) {
       />
     )
 
+  // 📚 Normal Classes
   const cards = cls.subjects.map((subject) => ({
     id: subject.id,
     title: subject.name,
