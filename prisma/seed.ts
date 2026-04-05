@@ -1,4 +1,5 @@
 // prisma/seed.ts
+/// <reference types="node" />
 import "dotenv/config"
 import { PrismaClient } from "@prisma/client"
 import { withAccelerate } from "@prisma/extension-accelerate"
@@ -60,7 +61,9 @@ async function main() {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@school.com"
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123"
 
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } })
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: adminEmail },
+  })
 
   if (!existingAdmin) {
     await auth.api.signUpEmail({
@@ -99,10 +102,15 @@ async function main() {
     "lower-secondary": ["Class 6", "Class 7", "Class 8"],
     secondary: ["Class 9", "Class 10"],
     "higher-secondary": ["Class 11", "Class 12"],
-    bachelors: ["Bachelors Year 1","Bachelors Year 2","Bachelors Year 3","Bachelors Year 4"],
-    masters: ["Masters Year 1","Masters Year 2"],
-    gaming: ["Chess","Ludo","Carrom","Bagchal","Tic Tac Toe"],
-    loksewa: ["Loksewa Level 1","Loksewa Level 2","Loksewa Level 3"],
+    bachelors: [
+      "Bachelors Year 1",
+      "Bachelors Year 2",
+      "Bachelors Year 3",
+      "Bachelors Year 4",
+    ],
+    masters: ["Masters Year 1", "Masters Year 2"],
+    gaming: ["Chess", "Ludo", "Carrom", "Bagchal", "Tic Tac Toe"],
+    loksewa: ["Loksewa Level 1", "Loksewa Level 2", "Loksewa Level 3"],
   }
 
   const classSubjectsMap: Record<string, string[]> = {
@@ -114,8 +122,22 @@ async function main() {
     "Class 8": ["Math", "Science", "English", "Nepali", "Social"],
     "Class 9": ["Math", "Science", "English", "Nepali", "Social"],
     "Class 10": ["Math", "Science", "English", "Nepali", "Social"],
-    "Class 11": ["Math","Physics","Chemistry","Biology","English","Economics"],
-    "Class 12": ["Math","Physics","Chemistry","Biology","English","Economics"],
+    "Class 11": [
+      "Math",
+      "Physics",
+      "Chemistry",
+      "Biology",
+      "English",
+      "Economics",
+    ],
+    "Class 12": [
+      "Math",
+      "Physics",
+      "Chemistry",
+      "Biology",
+      "English",
+      "Economics",
+    ],
   }
 
   /* --------------------- */
@@ -123,61 +145,99 @@ async function main() {
   /* --------------------- */
   for (const levelName of levels) {
     const slug = slugify(levelName)
+
     await prisma.level.upsert({
       where: { slug },
       update: {},
-      create: { name: levelName, slug },
+      create: {
+        name: levelName,
+        slug,
+      },
     })
   }
+
   console.log("✅ Levels Seeded")
 
   /* --------------------- */
   /* Seed Classes */
   /* --------------------- */
   for (const [levelSlug, classes] of Object.entries(levelMap)) {
-    const level = await prisma.level.findUnique({ where: { slug: levelSlug } })
+    const level = await prisma.level.findUnique({
+      where: { slug: levelSlug },
+    })
+
     if (!level) continue
 
     for (const cls of classes) {
       await prisma.class.upsert({
-        where: { slug_levelId: { slug: slugify(cls), levelId: level.id } },
+        where: {
+          slug_levelId: {
+            slug: slugify(cls),
+            levelId: level.id,
+          },
+        },
         update: {},
         create: {
           name: cls,
           slug: slugify(cls),
           levelId: level.id,
-          isGame: level.slug === "gaming", // ✅ mark games
+          isGame: level.slug === "gaming",
         },
       })
     }
   }
+
   console.log("✅ Classes Seeded")
 
   /* --------------------- */
   /* Seed Subjects */
   /* --------------------- */
-  const allClasses = await prisma.class.findMany({ include: { level: true } })
+  const allClasses = await prisma.class.findMany({
+    include: { level: true },
+  })
 
   for (const cls of allClasses) {
-    if (cls.isGame) continue // ✅ skip gaming classes
-    const subjects = classSubjectsMap[cls.name] || ["Math", "Science", "English"]
+    if (cls.isGame) continue
+
+    const subjects =
+      classSubjectsMap[cls.name] || ["Math", "Science", "English"]
+
     for (const subject of subjects) {
       await prisma.subject.upsert({
-        where: { slug_classId: { slug: slugify(subject), classId: cls.id } },
+        where: {
+          slug_classId: {
+            slug: slugify(subject),
+            classId: cls.id,
+          },
+        },
         update: {},
-        create: { name: subject, slug: slugify(subject), classId: cls.id },
+        create: {
+          name: subject,
+          slug: slugify(subject),
+          classId: cls.id,
+        },
       })
     }
   }
+
   console.log("✅ Subjects Seeded")
 
   /* --------------------- */
-  /* Seed Publications + Books */
+  /* Seed Publications */
   /* --------------------- */
-  const allSubjects = await prisma.subject.findMany({ include: { class: { include: { level: true } } } })
+  const allSubjects = await prisma.subject.findMany({
+    include: {
+      class: {
+        include: {
+          level: true,
+        },
+      },
+    },
+  })
 
   for (const subject of allSubjects) {
-    if (subject.class.isGame) continue // ✅ skip gaming classes
+    if (subject.class.isGame) continue
+
     const level = subject.class.level
 
     for (let book = 1; book <= 2; book++) {
@@ -191,7 +251,7 @@ async function main() {
           id: `pub-${subject.id}-${slug}`,
           title,
           slug,
-          description: `${subject.name} Book for ${subject.class.name}`,
+          description: `${subject.name} Book`,
           href: `/${slugify(level.name)}/${subject.class.slug}/${subject.slug}/${slug}`,
           subjectId: subject.id,
         },
@@ -199,12 +259,21 @@ async function main() {
 
       for (let i = 1; i <= 20; i++) {
         await prisma.publicationPage.upsert({
-          where: { publicationId_pageNumber: { publicationId: publication.id, pageNumber: i } },
+          where: {
+            publicationId_pageNumber: {
+              publicationId: publication.id,
+              pageNumber: i,
+            },
+          },
           update: {},
           create: {
             pageNumber: i,
             title: `Page ${i}`,
-            content: generatePageContent(subject.name, subject.class.name, i),
+            content: generatePageContent(
+              subject.name,
+              subject.class.name,
+              i
+            ),
             publicationId: publication.id,
           },
         })
@@ -212,8 +281,88 @@ async function main() {
     }
   }
 
-  console.log("✅ Demo Books Created")
-  console.log("📚 Flipbook Pages Created")
+  console.log("📚 Books Created")
+
+  /* --------------------- */
+  /* Chess Demo Users */
+  /* --------------------- */
+
+  console.log("♟️ Creating Chess Users...")
+
+  const chessUsers = [
+    { email: "player1@chess.com", name: "Player One" },
+    { email: "player2@chess.com", name: "Player Two" },
+    { email: "player3@chess.com", name: "Player Three" },
+  ]
+
+  for (const user of chessUsers) {
+    const existing = await prisma.user.findUnique({
+      where: { email: user.email },
+    })
+
+    if (!existing) {
+      await auth.api.signUpEmail({
+        body: {
+          email: user.email,
+          password: "password123",
+          name: user.name,
+          role: "USER",
+        },
+      })
+    }
+  }
+
+  const players = await prisma.user.findMany({
+    where: {
+      email: {
+        in: chessUsers.map((u) => u.email),
+      },
+    },
+  })
+
+  /* --------------------- */
+  /* Matchmaking Queue */
+  /* --------------------- */
+
+  for (const player of players) {
+    await prisma.matchmakingQueue.upsert({
+      where: {
+        userId_gameType: {
+          userId: player.id,
+          gameType: "CHESS",
+        },
+      },
+      update: {},
+      create: {
+        userId: player.id,
+        gameType: "CHESS",
+        timeControl: "10+0",
+      },
+    })
+  }
+
+  /* --------------------- */
+  /* Demo Chess Game */
+  /* --------------------- */
+
+  if (players.length >= 2) {
+    await prisma.game.create({
+      data: {
+        whitePlayerId: players[0].id,
+        blackPlayerId: players[1].id,
+        status: "ACTIVE",
+        gameType: "CHESS",
+        position:
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        currentTurn: "WHITE",
+        moveCount: 0,
+        startedAt: new Date(),
+        timeControl: "10+0",
+      },
+    })
+  }
+
+  console.log("♟️ Chess Demo Ready")
   console.log("🎉 Database Seeded Successfully")
 }
 

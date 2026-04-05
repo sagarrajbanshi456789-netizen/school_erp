@@ -1,4 +1,4 @@
-import LevelTemplate from "../../../LevelTemplate"
+import LevelTemplate from "../../LevelTemplate"
 import Bagchal from "@/components/games/Bagchal"
 
 export default function BagchalPage() {

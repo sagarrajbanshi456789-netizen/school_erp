@@ -19,7 +19,7 @@
     "jsx": "react-jsx",
     "incremental": true,
     "types": [
-      "better-auth"
+      "better-auth",
     ], // include types for BetterAuth
     "plugins": [
       {

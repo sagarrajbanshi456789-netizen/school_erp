@@ -1,3 +1,4 @@
+// src/lib/prisma.ts
 import { PrismaClient } from "@prisma/client"
 import { withAccelerate } from "@prisma/extension-accelerate"
 

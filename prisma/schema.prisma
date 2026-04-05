@@ -11,25 +11,47 @@ datasource db {
 //////////////////////////////////////////////////////
 
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String   @unique
   phone         String?
-  role          Role      @default(CUSTOMER)
-  emailVerified Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          Role     @default(CUSTOMER)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   image         String?
-  assignedBooks AssignedBook[]
-   location      String?
-  device        String?
-  isOnline      Boolean   @default(false)
-  lastSeen      DateTime?
 
-  accounts      Account[]
-  sessions      Session[]
+  location String?
+  device   String?
+  isOnline Boolean   @default(false)
+  lastSeen DateTime?
+
+  assignedBooks AssignedBook[]
+
+  accounts          Account[]
+  sessions          Session[]
+  matchmakingQueues MatchmakingQueue[]
+  // Chess relations
+  gamesAsWhite      Game[]             @relation("whitePlayer")
+  gamesAsBlack      Game[]             @relation("blackPlayer")
+  moves             Move[]
+  statistics        UserStatistics?
 
   @@map("user")
+}
+
+model MatchmakingQueue {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  gameType    String @default("CHESS")
+  timeControl String @default("10+0")
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, gameType])
 }
 
 model Session {
@@ -42,17 +64,17 @@ model Session {
   userAgent String?
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("session")
 }
 
 model Account {
-  id                    String    @id @default(cuid())
-  accountId             String
-  providerId            String
-  userId                String
+  id         String @id @default(cuid())
+  accountId  String
+  providerId String
+  userId     String
 
   accessToken           String?
   refreshToken          String?
@@ -95,21 +117,21 @@ enum Role {
 //////////////////////////////////////////////////////
 
 model Level {
-  id      String  @id @default(cuid())
-  name    String
-  slug    String  @unique
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
 
   classes Class[]
 }
 
 model Class {
-  id      String @id @default(cuid())
-  name    String
-  slug    String
+  id   String @id @default(cuid())
+  name String
+  slug String
 
   levelId String
   isGame  Boolean @default(false)
-  level   Level  @relation(fields: [levelId], references: [id])
+  level   Level   @relation(fields: [levelId], references: [id])
 
   subjects Subject[]
 
@@ -117,9 +139,9 @@ model Class {
 }
 
 model Subject {
-  id      String @id @default(cuid())
-  name    String
-  slug    String
+  id   String @id @default(cuid())
+  name String
+  slug String
 
   classId String
   class   Class  @relation(fields: [classId], references: [id])
@@ -130,46 +152,197 @@ model Subject {
 }
 
 model Publication {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   title       String
-  slug        String   @unique
+  slug        String  @unique
   description String
   href        String
-  author      String?  // optional author for flipbook
-  assignedTo  AssignedBook[]
+  author      String?
 
-  subjectId   String
-  subject     Subject  @relation(fields: [subjectId], references: [id])
+  assignedTo AssignedBook[]
 
-  pages       PublicationPage[]
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  pages PublicationPage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PublicationPage {
-  id            String @id @default(cuid())
-  pageNumber    Int
-  title         String?
-  content       String  @db.Text
+  id         String  @id @default(cuid())
+  pageNumber Int
+  title      String?
+  content    String  @db.Text
 
   publicationId String
   publication   Publication @relation(fields: [publicationId], references: [id])
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([publicationId, pageNumber])
 }
+
 model AssignedBook {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
   employeeId    String
   publicationId String
 
-  employee      User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  employee    User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([employeeId, publicationId])
+}
+
+//////////////////////////////////////////////////////
+// Chess Game Models
+//////////////////////////////////////////////////////
+
+model Game {
+  id            String   @id @default(cuid())
+  gameType      GameType @default(CHESS)
+  // Players
+  whitePlayerId String
+  blackPlayerId String
+
+  whitePlayer User @relation("whitePlayer", fields: [whitePlayerId], references: [id], onDelete: Cascade)
+  blackPlayer User @relation("blackPlayer", fields: [blackPlayerId], references: [id], onDelete: Cascade)
+
+  // Game State
+  position     String      @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") @db.Text
+  status       GameStatus  @default(ACTIVE)
+  result       GameResult?
+  resultReason String?
+
+  // Timing
+  timeControl        String @default("10+0")
+  whiteTimeRemaining Int?
+  blackTimeRemaining Int?
+
+  // Metadata
+  moves       Move[]
+  moveCount   Int    @default(0)
+  currentTurn Turn   @default(WHITE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  // Ratings
+  whiteRatingBefore Int?
+  whiteRatingAfter  Int?
+  blackRatingBefore Int?
+  blackRatingAfter  Int?
+
+  @@index([whitePlayerId])
+  @@index([blackPlayerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("game")
+}
+
+model Move {
+  id String @id @default(cuid())
+
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  moveNumber Int
+  ply        Int
+
+  from      String
+  to        String
+  san       String?
+  promotion String?
+
+  capture   Boolean @default(false)
+  check     Boolean @default(false)
+  checkmate Boolean @default(false)
+  castling  String?
+  enPassant Boolean @default(false)
+
+  playerId String
+  player   User   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  notation String?
+
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([gameId])
+  @@index([playerId])
+  @@index([timestamp])
+  @@map("move")
+}
+
+model UserStatistics {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ratingBlitz     Int @default(1200)
+  ratingRapid     Int @default(1200)
+  ratingClassical Int @default(1200)
+
+  totalGames Int @default(0)
+  wins       Int @default(0)
+  losses     Int @default(0)
+  draws      Int @default(0)
+
+  winPercentage Float @default(0)
+
+  winStreak  Int @default(0)
+  lossStreak Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_statistics")
+}
+
+model ChessAchievement {
+  id          String  @id @default(cuid())
+  title       String
+  description String  @db.Text
+  badge       String?
+
+  createdAt DateTime @default(now())
+
+  @@map("chess_achievement")
+}
+
+//////////////////////////////////////////////////////
+// Enums
+//////////////////////////////////////////////////////
+
+enum GameStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+  DRAW_OFFERED
+  DRAW_DECLINED
+}
+
+enum GameResult {
+  WHITE_WIN
+  BLACK_WIN
+  DRAW
+  ABANDONED
+}
+
+enum Turn {
+  WHITE
+  BLACK
+}
+
+enum GameType {
+  CHESS
+  TICTACTOE
+  LUDO
+  BAGCHAL
 }

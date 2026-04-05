@@ -122,12 +122,11 @@ export default function GameBoard({
   const fontSize =
     SIZE <= 3 ? "text-4xl" : SIZE <= 6 ? "text-3xl" : "text-2xl"
 
-  const lineCoords = winningLine?.map((idx) => {
+   const lineCoords = winningLine?.map((idx) => {
     const row = Math.floor(idx / SIZE)
     const col = idx % SIZE
-    return { x: (col + 0.5) / SIZE, y: (row + 0.5) / SIZE }
+    return { x: col + 0.5, y: row + 0.5 } // for easier scaling
   })
-
   const lineColor = theme === "dark" ? "#f472b6" : "#ec4899"
 
   return (
@@ -197,22 +196,29 @@ export default function GameBoard({
           )
         })}
 
+        
+        {/* Rounded Winning Line */}
         {lineCoords && (
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            <motion.polyline
-              points={lineCoords
-                .map((p) => `${p.x * 100}% ${p.y * 100}%`)
-                .join(" ")}
-              fill="none"
-              stroke={lineColor}
-              strokeWidth={6}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={1000}
-              strokeDashoffset={1000}
-              animate={{ strokeDashoffset: 0 }}
-              transition={{ duration: 1.5 }}
-            />
+            {lineCoords.length >= 2 && (
+              <motion.line
+                x1={`${(lineCoords[0].x / SIZE) * 100}%`}
+                y1={`${(lineCoords[0].y / SIZE) * 100}%`}
+                x2={`${(lineCoords[lineCoords.length - 1].x / SIZE) * 100}%`}
+                y2={`${(lineCoords[lineCoords.length - 1].y / SIZE) * 100}%`}
+                stroke={lineColor}
+                strokeWidth={8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray={1000}
+                strokeDashoffset={1000}
+                animate={{ strokeDashoffset: 0 }}
+                transition={{ duration: 1.2, ease: "easeInOut" }}
+                style={{
+                  filter: `drop-shadow(0 0 10px ${lineColor}) drop-shadow(0 0 20px ${lineColor})`,
+                }}
+              />
+            )}
           </svg>
         )}
       </div>
@@ -221,12 +227,7 @@ export default function GameBoard({
         <div className="flex justify-center">
           <button
             onClick={reset}
-            className="
-              px-4 py-2 rounded-xl 
-              border border-cyan-500
-              hover:scale-105 
-              transition
-            "
+            className="px-4 py-2 rounded-xl border border-cyan-500 hover:scale-105 transition"
           >
             Play Again
           </button>
