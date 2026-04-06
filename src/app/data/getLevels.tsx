@@ -16,6 +16,29 @@ type LevelWithClasses = {
   }[]
 }
 
+function getLevelIcon(slug: string) {
+  switch (slug) {
+    case "primary":
+      return LucideIcons.School
+    case "lower-secondary":
+      return LucideIcons.BookOpen
+    case "secondary":
+      return LucideIcons.GraduationCap
+    case "higher-secondary":
+      return LucideIcons.Award
+    case "bachelors":
+      return LucideIcons.University
+    case "masters":
+      return LucideIcons.BadgeCheck
+    case "gaming":
+      return LucideIcons.Gamepad2
+    case "loksewa":
+      return LucideIcons.Briefcase
+    default:
+      return LucideIcons.Book
+  }
+}
+
 export async function getLevels(): Promise<CardType[]> {
   const levels = await prisma.level.findMany({
     include: {
@@ -29,17 +52,22 @@ export async function getLevels(): Promise<CardType[]> {
   const typedLevels = levels as LevelWithClasses[]
 
   return typedLevels.map((level, idx) => {
-    const IconComponent =
-      LucideIcons.Book as React.ElementType
+    const IconComponent = getLevelIcon(level.slug)
+
+    const isGaming = level.slug === "gaming"
 
     return {
       id: level.slug,
       title: level.name,
-      description: `${level.classes.length} Classes Available`,
+      description: isGaming
+        ? `${level.classes.length} Games Available`
+        : `${level.classes.length} Classes Available`,
       href: `/${level.slug}`,
       icon: (
         <IconComponent
-          className="w-5 h-5 text-purple-500"
+          className={`w-5 h-5 ${
+            isGaming ? "text-green-500" : "text-purple-500"
+          }`}
           aria-hidden="true"
         />
       ),

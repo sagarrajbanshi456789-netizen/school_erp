@@ -1,4 +1,4 @@
-import LevelTemplate from "../../LevelTemplate"
+import LevelTemplate from "../../../../../components/template/LevelTemplate"
 import Ludo from "@/components/games/Ludo"
 
 export default function LudoPage() {

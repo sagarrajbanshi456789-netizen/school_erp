@@ -1,6 +1,6 @@
 // src/app/(public)/(level)/[level]/gaming/chess/page.tsx
 
-import LevelTemplate from "../../LevelTemplate"
+import LevelTemplate from "../../../../../components/template/LevelTemplate"
 import ChessGame from "@/components/games/chess/ChessGame"
 
 export default function ChessPage() {

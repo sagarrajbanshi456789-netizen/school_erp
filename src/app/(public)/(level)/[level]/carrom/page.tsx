@@ -1,4 +1,4 @@
-import LevelTemplate from "../../LevelTemplate"
+import LevelTemplate from "../../../../../components/template/LevelTemplate"
 import Carrom from "@/components/games/Carrom"
 
 export default function CarromPage() {

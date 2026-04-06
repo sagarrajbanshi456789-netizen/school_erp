@@ -1,5 +1,5 @@
 // src/app/(public)/(level)/[level]/gaming/tic-tac-toe/page.tsx
-import LevelTemplate from "../../LevelTemplate"
+import LevelTemplate from "../../../../../components/template/LevelTemplate"
 import TicTacToe from "@/components/games/tic-tac-toe/TicTacToe"
 
 export default function TicTacToePage() {

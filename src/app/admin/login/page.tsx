@@ -12,9 +12,9 @@ export default async function AdminLoginPage() {
   })
 
   // If already logged in as admin → redirect
-  // if (session?.user?.role === "ADMIN") {
-  //   redirect("/admin/dashboard")
-  // }
+  if (session?.user?.role === "ADMIN") {
+    redirect("/admin/dashboard")
+  }
 
   return (
     <LoginForm

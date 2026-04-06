@@ -1,5 +1,5 @@
 // app/(public)/page.tsx
-import LevelTemplate from "./(level)/LevelTemplate"
+import LevelTemplate from "@/components/template/LevelTemplate"
 import { getLevels } from "@/app/data/getLevels"
 
 export default async function HomePage() {

@@ -2,14 +2,20 @@
 
 import React from "react"
 import { prisma } from "@/lib/prisma"
-import LevelTemplate from "../../LevelTemplate"
+import LevelTemplate from "@/components/template/LevelTemplate"
+import { getSubjects } from "@/app/data/getSubjects"
 
 interface PageProps {
   params: Promise<{ level: string; class: string }>
 }
 
-export default async function ClassPage({ params }: PageProps) {
-  const { level: levelSlug, class: classSlug } = await params
+export default async function ClassPage({
+  params,
+}: PageProps) {
+  const {
+    level: levelSlug,
+    class: classSlug,
+  } = await params
 
   const level = await prisma.level.findUnique({
     where: { slug: levelSlug },
@@ -25,15 +31,12 @@ export default async function ClassPage({ params }: PageProps) {
       />
     )
 
-  const cls = await prisma.class.findUnique({
+  const cls = await prisma.class.findFirst({
     where: {
-      slug_levelId: {
-        slug: classSlug,
-        levelId: level.id,
+      slug: classSlug,
+      level: {
+        slug: levelSlug,
       },
-    },
-    include: {
-      subjects: true,
     },
   })
 
@@ -47,13 +50,11 @@ export default async function ClassPage({ params }: PageProps) {
       />
     )
 
-  // 📚 Normal Classes
-  const cards = cls.subjects.map((subject) => ({
-    id: subject.id,
-    title: subject.name,
-    description: `Publications for ${subject.name}`,
-    href: `/${levelSlug}/${classSlug}/${subject.slug}`,
-  }))
+  // Use Shared Data Function
+  const cards = await getSubjects(
+    levelSlug,
+    classSlug
+  )
 
   return (
     <LevelTemplate
