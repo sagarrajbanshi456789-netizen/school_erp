@@ -56,15 +56,6 @@ export default function EmployeeSidebar({
         ${open ? "left-0" : "-left-64"} // Slide in/out for mobile
         ${collapsed ? "w-20" : "w-64"}`} // Width based on collapse
       >
-        {/* Sidebar header */}
-        <div className="p-4 flex justify-between items-center">
-          {!collapsed && (
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Employee</h2> 
-          )} {/* Show title if not collapsed, adapt color for dark mode */}
-          <button className="md:hidden" onClick={() => setOpen(false)}>
-            <X className="text-gray-700 dark:text-gray-200" /> {/* Close button for mobile */}
-          </button>
-        </div>
 
         {/* Navigation links */}
         <nav className="p-4">

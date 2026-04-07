@@ -3,8 +3,19 @@ import LevelTemplate from "@/components/template/LevelTemplate"
 import { getLevels } from "@/app/data/getLevels"
 
 export default async function HomePage() {
-  // Fetch cards dynamically from database
-  const cards = await getLevels()
+  let cards = []
+
+  try {
+    // Fetch cards dynamically from database
+    cards = await getLevels()
+  } catch (error: any) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-red-50 text-red-800">
+        <h1 className="text-2xl font-bold mb-2">Error</h1>
+        <p className="text-center">{error.message}</p>
+      </div>
+    )
+  }
 
   return (
     <LevelTemplate

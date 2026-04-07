@@ -40,38 +40,40 @@ function getLevelIcon(slug: string) {
 }
 
 export async function getLevels(): Promise<CardType[]> {
-  const levels = await prisma.level.findMany({
-    include: {
-      classes: true,
-    },
-    orderBy: {
-      name: "asc",
-    },
-  })
+  try {
+    const levels = await prisma.level.findMany({
+      include: { classes: true },
+      orderBy: { name: "asc" },
+    })
 
-  const typedLevels = levels as LevelWithClasses[]
+    const typedLevels = levels as LevelWithClasses[]
 
-  return typedLevels.map((level, idx) => {
-    const IconComponent = getLevelIcon(level.slug)
+    return typedLevels.map((level, idx) => {
+      const IconComponent = getLevelIcon(level.slug)
+      const isGaming = level.slug === "gaming"
 
-    const isGaming = level.slug === "gaming"
-
-    return {
-      id: level.slug,
-      title: level.name,
-      description: isGaming
-        ? `${level.classes.length} Games Available`
-        : `${level.classes.length} Classes Available`,
-      href: `/${level.slug}`,
-      icon: (
-        <IconComponent
-          className={`w-5 h-5 ${
-            isGaming ? "text-green-500" : "text-purple-500"
-          }`}
-          aria-hidden="true"
-        />
-      ),
-      delay: idx * 0.1,
-    }
-  })
+      return {
+        id: level.slug,
+        title: level.name,
+        description: isGaming
+          ? `${level.classes.length} Games Available`
+          : `${level.classes.length} Classes Available`,
+        href: `/${level.slug}`,
+        icon: (
+          <IconComponent
+            className={`w-5 h-5 ${
+              isGaming ? "text-green-500" : "text-purple-500"
+            }`}
+            aria-hidden="true"
+          />
+        ),
+        delay: idx * 0.1,
+      }
+    })
+  } catch (error: any) {
+    console.error("Prisma Error:", error)
+    throw new Error(
+      "Unable to connect to the Accelerate API. This may be due to a network or DNS issue. Please check your connection and the Accelerate connection string. For details, visit https://www.prisma.io/docs/accelerate/troubleshoot."
+    )
+  }
 }
