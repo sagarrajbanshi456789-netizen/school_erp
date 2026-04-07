@@ -1,26 +1,27 @@
+// src/app/employee/dashboard/page.tsx
 'use client'
 
-import Link from 'next/link'
-import { BookOpen, Clock, CheckCircle } from 'lucide-react'
-import { useBetterAuth } from '@/lib/useBetterAuth'
+import Link from 'next/link' // For client-side navigation
+import { BookOpen, Clock, CheckCircle } from 'lucide-react' // Icons
+import { useBetterAuth } from '@/lib/useBetterAuth' // Custom authentication hook
 
 export default function EmployeeDashboard() {
-  // Later this will come from DB (only assigned books)
+  // Sample assigned books (later this will come from DB)
   const assignedBooks = [
     { id: 1, title: "Class 3 Math - Asmita", totalPages: 120, completedPages: 35 },
     { id: 2, title: "Class 3 Science - Nima", totalPages: 98, completedPages: 12 },
   ]
 
-  const { user } = useBetterAuth()
+  const { user } = useBetterAuth() // Get current logged-in user
 
   return (
     <div className="space-y-8">
       {/* 👋 Welcome Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-1">
+        <h1 className="text-3xl font-bold mb-1 text-gray-900 dark:text-gray-100">
           Welcome back {user?.name || "Employee"} 👋
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-gray-600 dark:text-gray-300">
           Here’s an overview of your assigned book work.
         </p>
       </div>
@@ -28,17 +29,17 @@ export default function EmployeeDashboard() {
       {/* 📊 Stats Row */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          icon={<BookOpen className="w-6 h-6 text-blue-600" />}
+          icon={<BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
           title="Assigned Books"
           value={assignedBooks.length.toString()}
         />
         <StatCard
-          icon={<Clock className="w-6 h-6 text-orange-500" />}
+          icon={<Clock className="w-6 h-6 text-orange-500 dark:text-orange-400" />}
           title="Pages In Progress"
           value="18"
         />
         <StatCard
-          icon={<CheckCircle className="w-6 h-6 text-green-600" />}
+          icon={<CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />}
           title="Pages Completed"
           value="47"
         />
@@ -46,7 +47,7 @@ export default function EmployeeDashboard() {
 
       {/* 📚 Assigned Books Section */}
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Your Books</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Your Books</h2>
 
         <div className="grid gap-6 md:grid-cols-2">
           {assignedBooks.map((book) => {
@@ -56,26 +57,27 @@ export default function EmployeeDashboard() {
 
             return (
               <Link
-                key={book.id}
-                href={`/employee/books/${book.id}/pages`}
-                className="block p-5 bg-white rounded-2xl shadow hover:shadow-md transition border"
+                key={book.id} // Unique key for list
+                href={`/employee/books/${book.id}/pages`} // Link to book pages
+                className="block p-5 bg-white dark:bg-gray-800 rounded-2xl shadow hover:shadow-md transition border border-gray-200 dark:border-gray-700"
               >
+                {/* Book title and page count */}
                 <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg font-semibold">{book.title}</h3>
-                  <span className="text-sm text-muted-foreground">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{book.title}</h3>
+                  <span className="text-sm text-gray-500 dark:text-gray-300">
                     {book.completedPages}/{book.totalPages} pages
                   </span>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full"
+                    className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-500 dark:text-gray-300">
                   {progress}% completed
                 </p>
               </Link>
@@ -86,19 +88,21 @@ export default function EmployeeDashboard() {
 
       {/* ⚡ Quick Actions */}
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Quick Actions</h2>
 
         <div className="flex flex-wrap gap-4">
+          {/* Add New Page button */}
           <Link
             href="/employee/books/1/pages/new"
-            className="px-5 py-3 bg-green-600 text-white rounded-xl shadow hover:bg-green-700 transition"
+            className="px-5 py-3 bg-green-600 dark:bg-green-500 text-white rounded-xl shadow hover:bg-green-700 dark:hover:bg-green-600 transition"
           >
             ➕ Add New Page
           </Link>
 
+          {/* Continue Editing button */}
           <Link
             href="/employee/books/1/pages"
-            className="px-5 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
+            className="px-5 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-xl shadow hover:bg-blue-700 dark:hover:bg-blue-600 transition"
           >
             ✏️ Continue Editing
           </Link>
@@ -108,6 +112,7 @@ export default function EmployeeDashboard() {
   )
 }
 
+// StatCard component for dashboard stats
 function StatCard({
   icon,
   title,
@@ -118,11 +123,13 @@ function StatCard({
   value: string
 }) {
   return (
-    <div className="flex items-center gap-4 p-5 bg-white rounded-2xl shadow border">
-      <div className="p-3 bg-gray-100 rounded-xl">{icon}</div>
+    <div className="flex items-center gap-4 p-5 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
+      {/* Icon box */}
+      <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-xl">{icon}</div>
+      {/* Text */}
       <div>
-        <p className="text-sm text-muted-foreground">{title}</p>
-        <p className="text-xl font-bold">{value}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-300">{title}</p>
+        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
       </div>
     </div>
   )
