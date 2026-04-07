@@ -1,8 +1,6 @@
-// src/app/layout.tsx
 import type { Metadata } from "next"
+import AuthProvider from "@/components/providers/AuthProvider"
 import "./globals.css"
-import Providers from "@/components/providers/ThemeProvider"
-
 export const metadata: Metadata = {
   title: "School ERP",
   description: "School Enterprise Resource Planning System",
@@ -15,10 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
-        <Providers>
+      <body className="min-h-screen bg-background antialiased">
+        <AuthProvider>
           {children}
-        </Providers>
+        </AuthProvider>
       </body>
     </html>
   )
