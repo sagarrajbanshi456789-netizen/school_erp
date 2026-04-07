@@ -16,6 +16,13 @@ import PasswordInput from "@/components/password/password-input"
 
 type Role = "ADMIN" | "EMPLOYEE" | "CUSTOMER"
 
+// ✅ Role Hierarchy Access
+const roleAccess: Record<Role, Role[]> = {
+  ADMIN: ["ADMIN", "EMPLOYEE", "CUSTOMER"],
+  EMPLOYEE: ["EMPLOYEE", "CUSTOMER"],
+  CUSTOMER: ["CUSTOMER"],
+}
+
 type LoginFormProps = {
   title?: string
   redirectTo?: string
@@ -40,18 +47,31 @@ export default function LoginForm({
     }
   }, [])
 
+  // 🧠 Remember Email Load
+  useEffect(() => {
+    const saved = localStorage.getItem("rememberEmail")
+    if (saved) {
+      setEmail(saved)
+      setRemember(true)
+    }
+  }, [])
+
   // 🔁 Auto redirect if already logged in
   useEffect(() => {
+    let mounted = true
+
     const checkSession = async () => {
       const session = await authClient.getSession()
+
+      if (!mounted) return
 
       const user = session?.data?.user
       if (!user) return
 
       const userRole = (user as any)?.role as Role
 
-      // 🔐 Role check
-      if (role && userRole !== role) return
+      // 🔐 Role hierarchy check
+      if (role && !roleAccess[userRole]?.includes(role)) return
 
       if (redirectTo) {
         router.replace(redirectTo)
@@ -67,6 +87,10 @@ export default function LoginForm({
     }
 
     checkSession()
+
+    return () => {
+      mounted = false
+    }
   }, [role, redirectTo, router])
 
   const [email, setEmail] = useState("")
@@ -84,6 +108,7 @@ export default function LoginForm({
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // 🚫 Double click protection
     if (loading) return
 
     // ⛔ block if too many attempts
@@ -128,42 +153,51 @@ export default function LoginForm({
       // ✅ Reset attempts
       setAttempts(0)
       setBlockedUntil(null)
+
       const session = await authClient.getSession()
 
-      const user = session?.data?.user
+      if (!session?.data?.user) {
+        setError("Login failed")
+        return
+      }
+
+      const user = session.data.user
       const userRole = (user as any)?.role as Role
-      console.log("Login result:", result)
-      console.log("Session:", session)
-      console.log("User:", user)
-      console.log("User role:", userRole)
-      console.log("Required role:", role)
-      // 🔐 Role Guard
-      if (role && userRole !== role) {
+
+      // 🔐 Role Hierarchy Guard
+      if (role && !roleAccess[userRole]?.includes(role)) {
         setError("Unauthorized access for this panel")
         return
-      }    
+      }
+
+      // 🧠 Remember email persistence
+      if (remember) {
+        localStorage.setItem("rememberEmail", cleanEmail)
+      } else {
+        localStorage.removeItem("rememberEmail")
+      }
 
       close()
       onSuccess?.()
+
       // 🔑 Temp password check
       if ((user as any)?.tempPassword) {
         router.push("/employee/change-password")
         return
       }
 
-      // 🚀 Redirect
+      // 🚀 Redirect based on requested panel (not highest role)
       if (redirectTo) {
         router.push(redirectTo)
       } else {
-        if (userRole === "ADMIN") {
+        if (role === "ADMIN") {
           router.push("/admin/dashboard")
-        } else if (userRole === "EMPLOYEE") {
+        } else if (role === "EMPLOYEE") {
           router.push("/employee/dashboard")
         } else {
           router.refresh()
         }
       }
-
     } catch (err) {
       console.error("Login error:", err)
       setError("Something went wrong. Please try again.")
@@ -203,6 +237,7 @@ export default function LoginForm({
         <Label>Password</Label>
         <PasswordInput
           value={password}
+          // disabled={loading}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
         />
@@ -213,6 +248,7 @@ export default function LoginForm({
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox
             checked={remember}
+            disabled={loading}
             onCheckedChange={(checked) => setRemember(!!checked)}
           />
           Remember me

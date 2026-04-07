@@ -1,3 +1,4 @@
+// src/app/data/getPublications.tsx
 import { prisma } from "@/lib/prisma"
 import * as LucideIcons from "lucide-react"
 import { CardType } from "./types"

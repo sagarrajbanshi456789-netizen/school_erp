@@ -1,75 +1,50 @@
 // app/(public)/(level)/[level]/[class]/[subject]/[publication]/page.tsx
+import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import PublicationFlipBook, { PageData } from "./PublicationFlipBook"
 
 interface PageProps {
-  params: {
+  params: Promise<{
     level: string
     class: string
     subject: string
     publication: string
-  } | Promise<{ level: string; class: string; subject: string; publication: string }>
+  }>
 }
 
-// Type for Prisma publication with pages
-interface PublicationWithPages {
-  id: string
-  title: string
-  slug: string
-  description: string
-  href: string
-  author: string | null
-  pages: PageData[]
-}
+// ✅ Explicit type for Publication with pages
+type PublicationWithPages = Prisma.PublicationGetPayload<{
+  include: { pages: true }
+}>
 
-export default async function PublicationViewer(props: PageProps) {
-  // Unwrap params if it’s a Promise
-  const params = await props.params
-  const { publication } = params
+export default async function PublicationViewer({ params }: PageProps) {
+  const { publication } = await params
 
   if (!publication) notFound()
 
-  // Fetch the publication along with its pages
+  // ✅ Tell TS that pages are included
   const publicationData = await prisma.publication.findUnique({
     where: { slug: publication },
-    include: {
-      pages: {
-        orderBy: { pageNumber: "asc" },
-        select: {
-          id: true,
-          pageNumber: true,
-          content: true,
-        },
-      },
-    },
-  })
+    include: { pages: { orderBy: { pageNumber: "asc" } } },
+  }) as PublicationWithPages | null // <-- cast ensures TS knows pages exist
 
   if (!publicationData) notFound()
 
-  const publicationWithPages: PublicationWithPages = {
-    id: publicationData.id,
-    title: publicationData.title,
-    slug: publicationData.slug,
-    description: publicationData.description,
-    href: publicationData.href,
-    author: publicationData.author,
-    pages: publicationData.pages.map((p) => ({
-      id: p.id,
-      pageNumber: p.pageNumber,
-      content: p.content,
-    })),
-  }
+  const pages: PageData[] = publicationData.pages.map((p) => ({
+    id: p.id,
+    pageNumber: p.pageNumber,
+    content: p.content,
+  }))
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">{publicationWithPages.title}</h1>
+      <h1 className="text-2xl font-bold mb-6">
+        {publicationData.title}
+      </h1>
 
-      {publicationWithPages.pages.length > 0 ? (
-        <PublicationFlipBook
-          title={publicationWithPages.title}
-          pages={publicationWithPages.pages}
-        />
+      {pages.length > 0 ? (
+        <PublicationFlipBook title={publicationData.title} pages={pages} />
       ) : (
         <p className="text-gray-500">No pages available for this publication.</p>
       )}

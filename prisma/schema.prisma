@@ -36,6 +36,7 @@ model User {
   gamesAsBlack      Game[]             @relation("blackPlayer")
   moves             Move[]
   statistics        UserStatistics?
+  loginActivities   LoginActivity[]
 
   @@map("user")
 }
@@ -314,6 +315,20 @@ model ChessAchievement {
   createdAt DateTime @default(now())
 
   @@map("chess_achievement")
+}
+
+model LoginActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessionId String?
+  ip        String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 //////////////////////////////////////////////////////
