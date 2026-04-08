@@ -1,3 +1,4 @@
+// src/components/employee/AddEmployeeDialog.tsx
 "use client";
 
 import { useState } from "react";
@@ -32,9 +33,7 @@ export default function AddEmployeeDialog() {
   const [open, setOpen] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
 
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof FormDataType, string>>
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormDataType, string>>>({});
 
   const [form, setForm] = useState<FormDataType>({
     name: "",
@@ -50,26 +49,20 @@ export default function AddEmployeeDialog() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    console.log("Submitting form...");
-
     const cleanedForm = {
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
     };
-    console.log("Cleaned Form:", cleanedForm);
-    // Zod validation
-    const result = employeeSchema.safeParse(cleanedForm);
-    console.log("Validation result:", result);
-    if (!result.success) {
-      console.log("Validation errors:", result.error.issues);
-      const fieldErrors: Partial<Record<keyof FormDataType, string>> = {};
 
+    const result = employeeSchema.safeParse(cleanedForm);
+
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof FormDataType, string>> = {};
       result.error.issues.forEach((issue) => {
         const field = issue.path[0] as keyof FormDataType;
         fieldErrors[field] = issue.message;
       });
-
       setErrors(fieldErrors);
       return;
     }
@@ -78,14 +71,8 @@ export default function AddEmployeeDialog() {
     setIsPending(true);
 
     try {
-      console.log("Calling createEmployee...");
-
       const res = await createEmployee(cleanedForm);
-
-      console.log("Result:", res);
-
       setTempPassword(res?.tempPassword || null);
-
       toast.success("Employee created successfully ✅");
 
       setForm({
@@ -96,13 +83,7 @@ export default function AddEmployeeDialog() {
 
       router.refresh();
     } catch (err: unknown) {
-      console.error(err);
-
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to create employee"
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to create employee");
     } finally {
       setIsPending(false);
     }
@@ -110,7 +91,6 @@ export default function AddEmployeeDialog() {
 
   function copyPassword() {
     if (!tempPassword) return;
-
     navigator.clipboard.writeText(tempPassword);
     toast.success("Password copied");
   }
@@ -134,15 +114,25 @@ export default function AddEmployeeDialog() {
         <Button>Add Employee</Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md bg-[var(--card)] dark:bg-[var(--card)] border border-[var(--border)] rounded-lg"
+      >
         <DialogHeader>
-          <DialogTitle>Add New Employee</DialogTitle>
+          <DialogTitle className="text-[var(--card-foreground)]">
+            Add New Employee
+          </DialogTitle>
         </DialogHeader>
 
         {tempPassword ? (
           <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-700 font-medium">
+
+            {/* Success Box */}
+            <div className="
+              bg-green-50 dark:bg-green-900/30
+              border border-green-200 dark:border-green-800
+              rounded-lg p-4
+            ">
+              <p className="text-sm font-medium text-green-700 dark:text-green-400">
                 Employee Created Successfully
               </p>
 
@@ -150,26 +140,23 @@ export default function AddEmployeeDialog() {
                 <Label>Temporary Password</Label>
 
                 <div className="flex gap-2 mt-1">
-                  <Input value={tempPassword} readOnly />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={copyPassword}
-                  >
+                  <Input
+                    value={tempPassword}
+                    readOnly
+                    className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
+                  />
+                  <Button type="button" variant="secondary" onClick={copyPassword}>
                     Copy
                   </Button>
                 </div>
 
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-[var(--muted-foreground)] mt-2">
                   Share this password with employee. They can change after login.
                 </p>
               </div>
             </div>
 
-            <Button
-              className="w-full"
-              onClick={() => setOpen(false)}
-            >
+            <Button className="w-full" onClick={() => setOpen(false)}>
               Done
             </Button>
           </div>
@@ -177,7 +164,7 @@ export default function AddEmployeeDialog() {
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* NAME */}
-            <div>
+            <div className="space-y-1">
               <Label>Full Name</Label>
               <Input
                 name="name"
@@ -185,14 +172,13 @@ export default function AddEmployeeDialog() {
                 onChange={handleChange}
                 autoFocus
                 required
+                className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
               />
-              {errors.name && (
-                <p className="text-red-500 text-sm">{errors.name}</p>
-              )}
+              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
             </div>
 
             {/* EMAIL */}
-            <div>
+            <div className="space-y-1">
               <Label>Email</Label>
               <Input
                 name="email"
@@ -200,33 +186,33 @@ export default function AddEmployeeDialog() {
                 value={form.email}
                 onChange={handleChange}
                 required
+                className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
               />
-              {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
-              )}
+              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             </div>
 
             {/* PHONE */}
-            <div>
+            <div className="space-y-1">
               <Label>Phone</Label>
               <Input
                 name="phone"
                 value={form.phone}
                 onChange={handleChange}
+                className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
               />
-              {errors.phone && (
-                <p className="text-red-500 text-sm">{errors.phone}</p>
-              )}
+              {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
             </div>
 
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="w-full"
-            >
-              {isPending ? "Saving..." : "Save Employee"}
+            <Button type="submit" disabled={isPending} className="w-full">
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Saving...
+                </span>
+              ) : (
+                "Save Employee"
+              )}
             </Button>
-
           </form>
         )}
       </DialogContent>

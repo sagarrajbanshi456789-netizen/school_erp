@@ -6,6 +6,7 @@ import DeleteEmployeeDialog from "@/components/employee/DeleteEmployeeDialog"
 import AssignBooksDialog from "@/components/employee/AssignBooksDialog"
 import ResetEmployeePasswordDialog from "@/components/employee/ResetEmployeePasswordDialog"
 import { Prisma } from "@prisma/client"
+import LiveSearch from "./search"
 
 type Props = {
   searchParams: Promise<{
@@ -55,25 +56,19 @@ export default async function EmployeesPage({ searchParams }: Props) {
         <h1 className="text-2xl font-bold">Employees</h1>
 
         <div className="flex gap-3">
-          <form method="GET">
-            <input
-              name="search"
-              placeholder="Search..."
-              defaultValue={search}
-              className="border px-3 py-2 rounded w-48"
-            />
-          </form>
+         <LiveSearch defaultValue={search} />
 
           <AddEmployeeDialog />
         </div>
       </div>
 
       {/* TABLE */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-950 shadow-sm">
+
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full dark:bg-gray-900 text-sm">
             <thead className="bg-gray-100 text-left">
-              <tr>
+              <tr className="text-gray-700 dark:text-gray-300">
                 <th className="p-3">Employee</th>
                 <th className="p-3">Verified</th>
                 <th className="p-3">Contact</th>
@@ -107,7 +102,7 @@ export default async function EmployeesPage({ searchParams }: Props) {
                     7 * 24 * 60 * 60 * 1000
 
                   return (
-                    <tr key={emp.id} className="border-t hover:bg-gray-50">
+                    <tr key={emp.id} className="border-t border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900">
 
                       {/* Employee */}
                       <td className="p-3 flex items-center gap-3">
@@ -115,16 +110,14 @@ export default async function EmployeesPage({ searchParams }: Props) {
                           <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold">
                             {emp.name?.charAt(0).toUpperCase() || "E"}
                           </div>
-
-                          <span
-                            className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                              emp.isOnline ? "bg-green-500" : "bg-gray-400"
-                            }`}
-                          />
+                              <span
+                                className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${emp.isOnline ? "bg-green-500" : "bg-gray-400"
+                                  }`}
+                              />
                         </div>
 
                         <div>
-                          <p className="font-medium">{emp.name}</p>
+                          <p className="font-medium text-gray-800 dark:text-gray-200">{emp.name}</p>
                           <p className="text-gray-500 text-xs">{emp.email}</p>
                         </div>
                       </td>
@@ -134,11 +127,10 @@ export default async function EmployeesPage({ searchParams }: Props) {
                         <div>
                           Email:
                           <span
-                            className={`ml-1 px-2 py-0.5 rounded ${
-                              emp.emailVerified
+                            className={`ml-1 px-2 py-0.5 rounded ${emp.emailVerified
                                 ? "bg-green-100 text-green-700"
                                 : "bg-red-100 text-red-600"
-                            }`}
+                              }`}
                           >
                             {emp.emailVerified ? "Verified" : "Unverified"}
                           </span>
@@ -147,11 +139,10 @@ export default async function EmployeesPage({ searchParams }: Props) {
                         <div>
                           Phone:
                           <span
-                            className={`ml-1 px-2 py-0.5 rounded ${
-                              emp.phone
+                            className={`ml-1 px-2 py-0.5 rounded ${emp.phone
                                 ? "bg-green-100 text-green-700"
                                 : "bg-gray-200 text-gray-600"
-                            }`}
+                              }`}
                           >
                             {emp.phone ? "Added" : "Missing"}
                           </span>
@@ -190,19 +181,18 @@ export default async function EmployeesPage({ searchParams }: Props) {
                       {/* Status */}
                       <td className="p-3">
                         <span
-                          className={`px-2 py-1 text-xs rounded-full font-medium ${
-                            emp.isOnline
+                          className={`px-2 py-1 text-xs rounded-full font-medium ${emp.isOnline
                               ? "bg-green-100 text-green-700"
                               : inactive
-                              ? "bg-red-100 text-red-600"
-                              : "bg-gray-200 text-gray-600"
-                          }`}
+                                ? "bg-red-100 text-red-600"
+                                : "bg-gray-200 text-gray-600"
+                            }`}
                         >
                           {emp.isOnline
                             ? "Online"
                             : inactive
-                            ? "Inactive"
-                            : "Offline"}
+                              ? "Inactive"
+                              : "Offline"}
                         </span>
                       </td>
 
@@ -251,7 +241,7 @@ export default async function EmployeesPage({ searchParams }: Props) {
 
       {/* PAGINATION */}
       <div className="flex justify-between items-center text-sm">
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-400">
           Page {page} of {totalPages}
         </p>
 

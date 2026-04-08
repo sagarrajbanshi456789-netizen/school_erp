@@ -6,9 +6,6 @@ interface ThemeProviderProps {
   children: ReactNode
   defaultTheme?: 'light' | 'dark' | 'system'
   storageKey?: string
-  attribute?: string
-  enableSystem?: boolean
-  disableTransitionOnChange?: boolean
 }
 
 export default function ThemeProvider({
@@ -20,8 +17,12 @@ export default function ThemeProvider({
 
   useEffect(() => {
     setMounted(true)
+    applyTheme()
+  }, [])
 
+  function applyTheme() {
     const root = window.document.documentElement
+
     const savedTheme = localStorage.getItem(storageKey) as
       | 'light'
       | 'dark'
@@ -39,25 +40,22 @@ export default function ThemeProvider({
     } else {
       root.classList.remove('dark')
     }
-  }, [defaultTheme, storageKey])
+  }
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)')
 
     const handleChange = () => {
       const savedTheme = localStorage.getItem(storageKey)
+
       if (savedTheme === 'system' || !savedTheme) {
-        if (media.matches) {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
-        }
+        applyTheme()
       }
     }
 
     media.addEventListener('change', handleChange)
     return () => media.removeEventListener('change', handleChange)
-  }, [storageKey])
+  }, [])
 
   if (!mounted) return null
 
