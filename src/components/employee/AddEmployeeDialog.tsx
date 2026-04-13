@@ -1,9 +1,13 @@
-// src/components/employee/AddEmployeeDialog.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
 import { employeeSchema } from "@/lib/validations/employeeSchema";
+import { authClient } from "@/lib/auth-client";
+import { createEmployee } from "@/lib/actions/employeeActions";
 
 import {
   Dialog,
@@ -18,95 +22,165 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
-import { createEmployee } from "@/lib/actions/employeeActions";
+import { z } from "zod";
 
-interface FormDataType {
-  name: string;
-  email: string;
-  phone: string;
-}
+/* =========================
+   TYPES
+========================= */
+type FormData = z.infer<typeof employeeSchema>;
 
-export default function AddEmployeeDialog() {
+/* =========================
+   CUSTOM HOOK
+========================= */
+function useAddEmployee() {
   const router = useRouter();
 
-  const [isPending, setIsPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingPermission, setIsCheckingPermission] = useState(true);
+  const [isPending, setIsPending] = useState(false);
 
-  const [errors, setErrors] = useState<Partial<Record<keyof FormDataType, string>>>({});
-
-  const [form, setForm] = useState<FormDataType>({
-    name: "",
-    email: "",
-    phone: "",
+  const form = useForm<FormData>({
+    resolver: zodResolver(employeeSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+    },
   });
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
-  }
+  /* =========================
+     PERMISSION CHECK
+  ========================= */
+  // useEffect(() => {
+  //   async function checkPermission() {
+  //     try {
+  //       const { data } = await authClient.admin.hasPermission({
+  //         permissions: { user: ["create"] },
+  //       });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  //       setIsAdmin(Boolean(data?.success));
+  //     } catch {
+  //       setIsAdmin(false);
+  //     } finally {
+  //       setIsCheckingPermission(false);
+  //     }
+  //   }
 
-    const cleanedForm = {
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-    };
+  //   checkPermission();
+  // }, []);
 
-    const result = employeeSchema.safeParse(cleanedForm);
-
-    if (!result.success) {
-      const fieldErrors: Partial<Record<keyof FormDataType, string>> = {};
-      result.error.issues.forEach((issue) => {
-        const field = issue.path[0] as keyof FormDataType;
-        fieldErrors[field] = issue.message;
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-
-    setErrors({});
+  /* =========================
+     SUBMIT
+  ========================= */
+  const onSubmit = async (values: FormData) => {
     setIsPending(true);
 
     try {
-      const res = await createEmployee(cleanedForm);
-      setTempPassword(res?.tempPassword || null);
+      const cleaned = {
+        name: values.name.trim(),
+        email: values.email.trim(),
+        phone: values.phone?.trim() || "",
+      };
+
+      const res = await createEmployee(cleaned);
+
+      // if (!res?.success) {
+      //   throw new Error(res?.error || "Failed to create employee");
+      // }
+
+      setTempPassword(res.tempPassword);
       toast.success("Employee created successfully ✅");
-
-      setForm({
-        name: "",
-        email: "",
-        phone: "",
-      });
-
-      router.refresh();
+      form.reset();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create employee");
+      const message =
+        err instanceof Error ? err.message : "Failed to create employee";
+
+      if (
+        message.toLowerCase().includes("unauthorized") ||
+        message.toLowerCase().includes("forbidden") ||
+        message.toLowerCase().includes("admin")
+      ) {
+        toast.error("You don't have permission to create employees");
+      } else if (message.toLowerCase().includes("already exists")) {
+        toast.error("An employee with this email already exists");
+      } else {
+        toast.error(message);
+      }
     } finally {
       setIsPending(false);
     }
-  }
+  };
 
-  function copyPassword() {
+  /* =========================
+     COPY PASSWORD
+  ========================= */
+  const copyPassword = async () => {
     if (!tempPassword) return;
-    navigator.clipboard.writeText(tempPassword);
-    toast.success("Password copied");
-  }
 
-  function handleClose(open: boolean) {
-    setOpen(open);
-
-    if (!open) {
-      setTempPassword(null);
-      setForm({
-        name: "",
-        email: "",
-        phone: "",
-      });
+    try {
+      await navigator.clipboard.writeText(tempPassword);
+      toast.success("Password copied to clipboard");
+    } catch {
+      toast.error("Failed to copy password");
     }
-  }
+  };
+
+  /* =========================
+     CLOSE HANDLER
+  ========================= */
+  const handleClose = (state: boolean) => {
+    setOpen(state);
+
+    if (!state) {
+      setTimeout(() => {
+        setTempPassword(null);
+        form.reset();
+      }, 200);
+    }
+  };
+
+  const handleDone = () => {
+    setOpen(false);
+    router.refresh();
+  };
+
+  return {
+    open,
+    setOpen,
+    handleClose,
+    handleDone,
+    tempPassword,
+    isAdmin,
+    isCheckingPermission,
+    isPending,
+    form,
+    onSubmit,
+    copyPassword,
+  };
+}
+
+/* =========================
+   COMPONENT
+========================= */
+export default function AddEmployeeDialog() {
+  const {
+    open,
+    setOpen,
+    handleClose,
+    handleDone,
+    tempPassword,
+    isAdmin,
+    isCheckingPermission,
+    isPending,
+    form,
+    onSubmit,
+    copyPassword,
+  } = useAddEmployee();
+
+  if (isCheckingPermission) return null;
+  if (!isAdmin) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -114,24 +188,14 @@ export default function AddEmployeeDialog() {
         <Button>Add Employee</Button>
       </DialogTrigger>
 
-      <DialogContent
-        className="sm:max-w-md bg-[var(--card)] dark:bg-[var(--card)] border border-[var(--border)] rounded-lg"
-      >
+      <DialogContent className="sm:max-w-md bg-[var(--card)] border border-[var(--border)] rounded-lg">
         <DialogHeader>
-          <DialogTitle className="text-[var(--card-foreground)]">
-            Add New Employee
-          </DialogTitle>
+          <DialogTitle>Add New Employee</DialogTitle>
         </DialogHeader>
 
         {tempPassword ? (
           <div className="space-y-4">
-
-            {/* Success Box */}
-            <div className="
-              bg-green-50 dark:bg-green-900/30
-              border border-green-200 dark:border-green-800
-              rounded-lg p-4
-            ">
+            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <p className="text-sm font-medium text-green-700 dark:text-green-400">
                 Employee Created Successfully
               </p>
@@ -140,78 +204,71 @@ export default function AddEmployeeDialog() {
                 <Label>Temporary Password</Label>
 
                 <div className="flex gap-2 mt-1">
-                  <Input
-                    value={tempPassword}
-                    readOnly
-                    className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
-                  />
+                  <Input value={tempPassword} readOnly />
                   <Button type="button" variant="secondary" onClick={copyPassword}>
                     Copy
                   </Button>
                 </div>
 
-                <p className="text-xs text-[var(--muted-foreground)] mt-2">
+                <p className="text-xs mt-2 text-muted-foreground">
                   Share this password with employee. They can change after login.
                 </p>
               </div>
             </div>
 
-            <Button className="w-full" onClick={() => setOpen(false)}>
+            <Button className="w-full" onClick={handleDone}>
               Done
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* NAME */}
             <div className="space-y-1">
               <Label>Full Name</Label>
-              <Input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                autoFocus
-                required
-                className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
-              />
-              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+              <Input {...form.register("name")} placeholder="John Doe" autoFocus />
+              {form.formState.errors.name && (
+                <p className="text-red-500 text-sm">
+                  {form.formState.errors.name.message}
+                </p>
+              )}
             </div>
 
             {/* EMAIL */}
             <div className="space-y-1">
               <Label>Email</Label>
               <Input
-                name="email"
                 type="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
+                {...form.register("email")}
+                placeholder="john@example.com"
               />
-              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+              {form.formState.errors.email && (
+                <p className="text-red-500 text-sm">
+                  {form.formState.errors.email.message}
+                </p>
+              )}
             </div>
 
             {/* PHONE */}
             <div className="space-y-1">
               <Label>Phone</Label>
               <Input
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                className="bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)]"
+                type="tel"
+                {...form.register("phone")}
+                placeholder="+1 (555) 000-0000"
               />
-              {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+              {form.formState.errors.phone && (
+                <p className="text-red-500 text-sm">
+                  {form.formState.errors.phone.message}
+                </p>
+              )}
             </div>
 
-            <Button type="submit" disabled={isPending} className="w-full">
-              {isPending ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                  Saving...
-                </span>
-              ) : (
-                "Save Employee"
-              )}
+            <Button
+              type="submit"
+              disabled={isPending}
+              className="w-full"
+            >
+              {isPending ? "Saving..." : "Save Employee"}
             </Button>
           </form>
         )}

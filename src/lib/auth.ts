@@ -3,8 +3,8 @@
 import { betterAuth } from "better-auth"
 import { prisma } from "./prisma"
 import { prismaAdapter } from "better-auth/adapters/prisma"
+import { admin } from "better-auth/plugins"
 import { sendVerificationEmail } from "./email"
-
 // Validate required environment variables
 const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET
 if (!BETTER_AUTH_SECRET) {
@@ -40,16 +40,6 @@ export const auth = betterAuth({
 		},
 	},
 
-	//--------------------------------------------------
-	// Session Fields
-	//--------------------------------------------------
-	session: {
-		additionalFields: {
-			role: {
-				type: "string",
-			},
-		},
-	},
 
 	//--------------------------------------------------
 	// Login Activity Tracking
@@ -91,11 +81,21 @@ export const auth = betterAuth({
 
 	//--------------------------------------------------
 	// Email + Password
-	//--------------------------------------------------
+	//--------------------------------------------------	
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: true,
 		autoSignIn: false,
+		// [!code ++] Required when using email enumeration protection with admin plugin
+		customSyntheticUser: ({ coreFields, additionalFields, id }) => ({
+			...coreFields,
+			role: "user",
+			banned: false,
+			banReason: null,
+			banExpires: null,
+			...additionalFields,
+			id,
+		}),
 	},
 
 	//--------------------------------------------------
@@ -124,4 +124,13 @@ export const auth = betterAuth({
 			}
 		},
 	},
+	//--------------------------------------------------
+	// Plugins
+	//--------------------------------------------------
+	plugins: [ // [!code ++:6]
+		admin({
+			defaultRole: "user",
+			adminRoles: ["admin"],
+		}),
+	],
 })

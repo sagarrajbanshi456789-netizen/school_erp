@@ -1,150 +1,122 @@
 // src/lib/actions/employeeActions.ts
 "use server";
 
-import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+function generateTempPassword() {
+	const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+	let password = "";
+	for (let i = 0; i < 12; i++) {
+		password += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return password;
+}
 
 /**
  * ✅ CREATE EMPLOYEE
  */
 export async function createEmployee(data: {
-  name: string;
-  email: string;
-  phone?: string;
+	name: string;
+	email: string;
+	phone ? : string;
 }) {
+	if (!data.name || !data.email) {
+		throw new Error("Name and Email required");
+	}
 
-  if (!data.name || !data.email) {
-    throw new Error("Name and Email required");
-  }
+	const tempPassword = generateTempPassword();
 
-  // Check existing user
-  const existing = await prisma.user.findUnique({
-    where: { email: data.email },
-  });
+	// Create user via Better Auth Admin API
+	// Requires: admin() plugin + user must have admin role
+	const user = await auth.api.createUser({
+		body: {
+			email: data.email,
+			password: tempPassword,
+			name: data.name,
+			role: "EMPLOYEE",
+		},
+	});
 
-  if (existing) {
-    throw new Error("Email already exists");
-  }
+	revalidatePath("/admin/dashboard/employees");
 
-  // ✅ Generate Temp Password
-  const tempPassword = crypto.randomBytes(5).toString("hex");
-
-  const user = await prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      role: "EMPLOYEE",
-      emailVerified: true, // skip verification
-    },
-  });
-
-  // Hash temp password
-  const hashedPassword = await bcrypt.hash(tempPassword, 10);
-
-  // Create credential account
-  await prisma.account.create({
-    data: {
-      userId: user.id,
-      providerId: "credentials",
-      accountId: user.email,
-      password: hashedPassword,
-    },
-  });
-
-  revalidatePath("/admin/dashboard/employees");
-
-  return {
-    success: true,
-    tempPassword, // return temp password
-  };
+	return {
+		success: true,
+		user,
+		tempPassword,
+	};
 }
-
-
 
 /**
  * ✅ UPDATE EMPLOYEE
  */
 export async function updateEmployee(
-  userId: string,
-  data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-  }
+	userId: string,
+	data: {
+		name ? : string;
+		email ? : string;
+		phone ? : string;
+	}
 ) {
+	if (!userId) {
+		throw new Error("User ID is required");
+	}
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      ...(data.name && { name: data.name }),
-      ...(data.email && { email: data.email }),
-      ...(data.phone && { phone: data.phone }),
-    },
-  });
+	// Update via Better Auth Admin API
+	await auth.api.adminUpdateUser({
+		body: {
+			userId,
+			data, // Fields to update (name, email, phone, etc.)
+		},
+		headers: await headers(),
+	});
 
-  revalidatePath("/admin/dashboard/employees");
+	revalidatePath("/admin/dashboard/employees");
+
+	return { success: true };
 }
-
-
 
 /**
  * ✅ DELETE EMPLOYEE
  */
 export async function deleteEmployee(userId: string) {
+	if (!userId) {
+		throw new Error("User ID is required");
+	}
 
-  await prisma.user.delete({
-    where: {
-      id: userId,
-    },
-  });
+	await auth.api.removeUser({
+		body: { userId },
+		headers: await headers(),
+	});
 
-  revalidatePath("/admin/dashboard/employees");
+	revalidatePath("/admin/dashboard/employees");
+
+	return { success: true };
 }
-
 
 /**
  * ✅ RESET EMPLOYEE PASSWORD
  */
+export async function resetEmployeePassword(employeeId: string) {
+	if (!employeeId) {
+		throw new Error("Employee ID is required");
+	}
 
-function generateTempPassword() {
-  const chars =
-    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+	const tempPassword = generateTempPassword();
 
-  let password = "";
+	await auth.api.setUserPassword({
+		body: {
+			userId: employeeId,
+			newPassword: tempPassword,
+		},
+		headers: await headers(),
+	});
 
-  for (let i = 0; i < 8; i++) {
-    password += chars.charAt(
-      Math.floor(Math.random() * chars.length)
-    );
-  }
+	revalidatePath("/admin/dashboard/employees");
 
-  return password;
-}
-
-export async function resetEmployeePassword(
-  employeeId: string
-) {
-  const tempPassword = generateTempPassword();
-
-  const hashedPassword = await bcrypt.hash(
-    tempPassword,
-    10
-  );
-
-  await prisma.account.updateMany({
-    where: {
-      userId: employeeId,
-      providerId: "credentials",
-    },
-    data: {
-      password: hashedPassword,
-    },
-  });
-
-  revalidatePath("/admin/dashboard/employees");
-
-  return tempPassword;
+	return {
+		success: true,
+		tempPassword
+	};
 }

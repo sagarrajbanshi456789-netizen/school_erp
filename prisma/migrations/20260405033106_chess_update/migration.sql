@@ -1,9 +1,0 @@
--- CreateEnum
-CREATE TYPE "GameType" AS ENUM ('CHESS', 'TICTACTOE', 'LUDO', 'BAGCHAL');
-
--- AlterTable
-ALTER TABLE "game" ADD COLUMN     "gameType" "GameType" NOT NULL DEFAULT 'CHESS';
-
--- AlterTable
-ALTER TABLE "move" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "san" TEXT;
