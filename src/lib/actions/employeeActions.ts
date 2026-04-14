@@ -35,7 +35,7 @@ export async function createEmployee(data: {
 			email: data.email,
 			password: tempPassword,
 			name: data.name,
-			role: "EMPLOYEE",
+			// role: "EMPLOYEE",
 		},
 	});
 

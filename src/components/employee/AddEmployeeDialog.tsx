@@ -1,3 +1,4 @@
+// src/components/employee/AddEmployeeDialog.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -43,6 +44,7 @@ function useAddEmployee() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(employeeSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       email: "",
@@ -53,28 +55,29 @@ function useAddEmployee() {
   /* =========================
      PERMISSION CHECK
   ========================= */
-  // useEffect(() => {
-  //   async function checkPermission() {
-  //     try {
-  //       const { data } = await authClient.admin.hasPermission({
-  //         permissions: { user: ["create"] },
-  //       });
+  useEffect(() => {
+    async function checkPermission() {
+      try {
+        const { data } = await authClient.admin.hasPermission({
+          permissions: { user: ["create"] },
+        });
 
-  //       setIsAdmin(Boolean(data?.success));
-  //     } catch {
-  //       setIsAdmin(false);
-  //     } finally {
-  //       setIsCheckingPermission(false);
-  //     }
-  //   }
+        setIsAdmin(Boolean(data?.success));
+      } catch {
+        setIsAdmin(false);
+      } finally {
+        setIsCheckingPermission(false);
+      }
+    }
 
-  //   checkPermission();
-  // }, []);
+    checkPermission();
+  }, []);
 
   /* =========================
      SUBMIT
   ========================= */
   const onSubmit = async (values: FormData) => {
+    if (isPending) return; // prevent double submit
     setIsPending(true);
 
     try {
@@ -86,13 +89,29 @@ function useAddEmployee() {
 
       const res = await createEmployee(cleaned);
 
-      // if (!res?.success) {
-      //   throw new Error(res?.error || "Failed to create employee");
-      // }
+      if (!res?.success) {
+        throw new Error(res?.error || "Failed to create employee");
+      }
+
+      if (!res?.tempPassword) {
+        throw new Error("Temporary password not returned");
+      }
 
       setTempPassword(res.tempPassword);
-      toast.success("Employee created successfully ✅");
-      form.reset();
+
+      // Auto copy password
+      try {
+        await navigator.clipboard.writeText(res.tempPassword);
+        toast.success("Employee created & password copied ✅");
+      } catch {
+        toast.success("Employee created successfully ✅");
+      }
+
+      form.reset({
+        name: "",
+        email: "",
+        phone: "",
+      });
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to create employee";
@@ -134,10 +153,12 @@ function useAddEmployee() {
     setOpen(state);
 
     if (!state) {
-      setTimeout(() => {
-        setTempPassword(null);
-        form.reset();
-      }, 200);
+      setTempPassword(null);
+      form.reset({
+        name: "",
+        email: "",
+        phone: "",
+      });
     }
   };
 
@@ -179,8 +200,13 @@ export default function AddEmployeeDialog() {
     copyPassword,
   } = useAddEmployee();
 
-  if (isCheckingPermission) return null;
-  if (!isAdmin) return null;
+  if (isCheckingPermission) {
+    return <Button disabled>Checking...</Button>;
+  }
+
+  if (!isAdmin) {
+    return <Button disabled>Add Employee</Button>;
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -188,7 +214,7 @@ export default function AddEmployeeDialog() {
         <Button>Add Employee</Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md bg-[var(--card)] border border-[var(--border)] rounded-lg">
+      <DialogContent className="sm:max-w-md bg-(--card) border border-(--border) rounded-lg">
         <DialogHeader>
           <DialogTitle>Add New Employee</DialogTitle>
         </DialogHeader>
@@ -205,7 +231,11 @@ export default function AddEmployeeDialog() {
 
                 <div className="flex gap-2 mt-1">
                   <Input value={tempPassword} readOnly />
-                  <Button type="button" variant="secondary" onClick={copyPassword}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={copyPassword}
+                  >
                     Copy
                   </Button>
                 </div>
@@ -225,7 +255,12 @@ export default function AddEmployeeDialog() {
             {/* NAME */}
             <div className="space-y-1">
               <Label>Full Name</Label>
-              <Input {...form.register("name")} placeholder="John Doe" autoFocus />
+              <Input
+                {...form.register("name")}
+                placeholder="John Doe"
+                autoFocus
+                disabled={isPending}
+              />
               {form.formState.errors.name && (
                 <p className="text-red-500 text-sm">
                   {form.formState.errors.name.message}
@@ -240,6 +275,7 @@ export default function AddEmployeeDialog() {
                 type="email"
                 {...form.register("email")}
                 placeholder="john@example.com"
+                disabled={isPending}
               />
               {form.formState.errors.email && (
                 <p className="text-red-500 text-sm">
@@ -255,6 +291,7 @@ export default function AddEmployeeDialog() {
                 type="tel"
                 {...form.register("phone")}
                 placeholder="+1 (555) 000-0000"
+                disabled={isPending}
               />
               {form.formState.errors.phone && (
                 <p className="text-red-500 text-sm">
@@ -265,10 +302,10 @@ export default function AddEmployeeDialog() {
 
             <Button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || !form.formState.isValid}
               className="w-full"
             >
-              {isPending ? "Saving..." : "Save Employee"}
+              {isPending ? "Creating Employee..." : "Save Employee"}
             </Button>
           </form>
         )}

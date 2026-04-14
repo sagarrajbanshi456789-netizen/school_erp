@@ -10,10 +10,10 @@ import { Prisma } from "@prisma/client"
 import LiveSearch from "./search"
 
 type Props = {
-  searchParams: {
+  searchParams: Promise<{
     search?: string
     page?: string
-  }
+  }>
 }
 type EmployeeWithCount = Prisma.UserGetPayload<{
   include: {
@@ -24,8 +24,9 @@ type EmployeeWithCount = Prisma.UserGetPayload<{
 }>
 export default async function EmployeesPage({ searchParams }: Props) {
 
-  const search = searchParams?.search || ""
-  const page = Number(searchParams?.page || 1)
+  	const params = await searchParams
+			const search = params?.search || ""
+			const page = Number(params?.page || 1)
   const pageSize = 5
 
   const where: Prisma.UserWhereInput = {
