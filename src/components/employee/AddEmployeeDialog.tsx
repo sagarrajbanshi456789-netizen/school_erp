@@ -58,9 +58,11 @@ function useAddEmployee() {
   useEffect(() => {
     async function checkPermission() {
       try {
-        const { data } = await authClient.admin.hasPermission({
+        const { data, error } = await authClient.admin.hasPermission({
           permissions: { user: ["create"] },
         });
+console.log("Permission check result:", data);
+			console.log("Permission check error:", error); // [!code highlight]
 
         setIsAdmin(Boolean(data?.success));
       } catch {
@@ -90,7 +92,7 @@ function useAddEmployee() {
       const res = await createEmployee(cleaned);
 
       if (!res?.success) {
-        throw new Error(res?.error || "Failed to create employee");
+        throw new Error("Failed to create employee");
       }
 
       if (!res?.tempPassword) {
