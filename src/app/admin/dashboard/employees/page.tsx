@@ -62,8 +62,27 @@ export default async function EmployeesPage({ searchParams }: Props) {
     where: {
       employeeId: { in: employees.map(e => e.id) },
     },
+    select: {
+    employeeId: true,
+    publicationId: true,
+  }
   })
+const assignedCount: Record<string, number> = {}
 
+assigned.forEach((a) => {
+  if (!assignedCount[a.employeeId]) assignedCount[a.employeeId] = 0
+})
+
+const grouped: Record<string, Set<string>> = {}
+
+assigned.forEach((a) => {
+  if (!grouped[a.employeeId]) grouped[a.employeeId] = new Set()
+  grouped[a.employeeId].add(a.publicationId)
+})
+
+Object.keys(grouped).forEach((id) => {
+  assignedCount[id] = grouped[id].size
+})
   // ✅ Group assigned publications
   const assignedByEmployee = assigned.reduce((acc, a) => {
     if (!acc[a.employeeId]) acc[a.employeeId] = []
@@ -203,7 +222,7 @@ export default async function EmployeesPage({ searchParams }: Props) {
                       {/* Books */}
                       <td className="p-3">
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded text-xs">
-                          {/* {emp._count.assignedBooks} Books */}
+                          {assignedCount[emp.id] || 0} Books
                         </span>
                       </td>
 

@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { betterAuth } from 'better-auth'
+import { auth } from '@/lib/auth' // ✅ use instance
 
 export async function POST(req: NextRequest) {
-  const user = await betterAuth.getUser({ req })
+  const session = await auth.api.getSession({
+    headers: req.headers,
+  })
+
+  const user = session?.user
+
   if (!user || user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -14,9 +19,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
-  const book = await prisma.book.create({
-    data: { title, author, href, levelId, classId }
-  })
+  try {
+    const book = await prisma.book.create({
+      data: { title, author, href, levelId, classId }
+    })
 
-  return NextResponse.json(book)
+    return NextResponse.json(book)
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }

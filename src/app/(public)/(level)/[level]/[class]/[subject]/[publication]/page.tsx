@@ -2,7 +2,7 @@
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
-import PublicationFlipBook, { PageData } from "./PublicationFlipBook"
+import PublicationFlipBook, { PageData } from "./pdfview"
 
 interface PageProps {
   params: Promise<{
@@ -39,9 +39,9 @@ export default async function PublicationViewer({ params }: PageProps) {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">
+      {/* <h1 className="text-2xl font-bold mb-6">
         {publicationData.title}
-      </h1>
+      </h1> */}
 
       {pages.length > 0 ? (
         <PublicationFlipBook title={publicationData.title} pages={pages} />

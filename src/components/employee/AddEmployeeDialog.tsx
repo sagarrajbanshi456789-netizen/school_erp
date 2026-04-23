@@ -61,7 +61,8 @@ function useAddEmployee() {
         const { data, error } = await authClient.admin.hasPermission({
           permissions: { user: ["create"] },
         });
-console.log("Permission check result:", data);
+      console.log("Permission success:", data?.success);
+      console.log("Permission data:", data);
 			console.log("Permission check error:", error); // [!code highlight]
 
         setIsAdmin(Boolean(data?.success));
@@ -75,6 +76,18 @@ console.log("Permission check result:", data);
     checkPermission();
   }, []);
 
+
+
+  useEffect(() => {
+  async function checkUser() {
+    const session = await authClient.getSession();
+
+    console.log("Current Session:", session);
+    console.log("User:", session?.data?.user);
+  }
+
+  checkUser();
+}, []);
   /* =========================
      SUBMIT
   ========================= */
@@ -203,20 +216,18 @@ export default function AddEmployeeDialog() {
   } = useAddEmployee();
 
   if (isCheckingPermission) {
-    return <Button disabled>Checking...</Button>;
+    return <Button disabled className="animate-pulse">Checking Permission...</Button>;
   }
 
-  if (!isAdmin) {
-    return <Button disabled>Add Employee</Button>;
-  }
+  // if (!isAdmin) {
+  //   return <Button disabled>Add Employee</Button>;
+  // }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogTrigger asChild>
-        <Button>Add Employee</Button>
-      </DialogTrigger>
+      <Button onClick={() => setOpen(true)}>Add Employee</Button>
 
-      <DialogContent className="sm:max-w-md bg-(--card) border border-(--border) rounded-lg">
+      <DialogContent className="sm:max-w-md rounded-2xl border border-border bg-background text-foreground shadow-2xl backdrop-blur-sm transition-colors duration-300">
         <DialogHeader>
           <DialogTitle>Add New Employee</DialogTitle>
         </DialogHeader>

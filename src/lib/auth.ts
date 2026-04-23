@@ -32,13 +32,13 @@ export const auth = betterAuth({
 	//--------------------------------------------------
 	// User Fields
 	//--------------------------------------------------
-	user: {
-		additionalFields: {
-			role: {
-				type: "string",
-			},
-		},
-	},
+	// user: {
+	// 	additionalFields: {
+	// 		role: {
+	// 			type: "string",
+	// 		},
+	// 	},
+	// },
 
 
 	//--------------------------------------------------
@@ -89,7 +89,7 @@ export const auth = betterAuth({
 		// [!code ++] Required when using email enumeration protection with admin plugin
 		customSyntheticUser: ({ coreFields, additionalFields, id }) => ({
 			...coreFields,
-			role: "user",
+			role: "EMPLOYEE", // default role for synthetic users
 			banned: false,
 			banReason: null,
 			banExpires: null,
@@ -125,12 +125,14 @@ export const auth = betterAuth({
 		},
 	},
 	//--------------------------------------------------
-	// Plugins
+	// Plugins important
 	//--------------------------------------------------
 	plugins: [ // [!code ++:6]
 		admin({
-			defaultRole: "user",
-			adminRoles: ["admin"],
+			defaultRole: "EMPLOYEE",
+			adminRoles: ["ADMIN"],		
+			// adminUserIds: ["your-user-id"], // Temporarily add your ID here for testing
 		}),
 	],
 })
+console.log("✅ Auth configuration complete")

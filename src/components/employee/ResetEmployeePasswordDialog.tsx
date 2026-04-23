@@ -1,3 +1,4 @@
+// src/components/employee/ResetEmployeePasswordDialog.tsx
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
@@ -40,29 +41,29 @@ export default function ResetEmployeePasswordDialog({
   }, [tempPassword]);
 
   const handleReset = () => {
-    if (isPending) return;
+  if (isPending) return
 
-    startTransition(async () => {
+  startTransition(async () => {
+    try {
+      const result = await resetEmployeePassword(employeeId)
+
+      setTempPassword(result.tempPassword)
+
       try {
-        // ✅ Use Better Auth API
-        const password = await resetEmployeePassword(employeeId);
-
-        setTempPassword(password);
-
-        // Auto-copy password to clipboard
-        try {
-          await navigator.clipboard.writeText(password);
-          toast.success("Temporary password generated & copied");
-        } catch {
-          toast.success("Temporary password generated");
-        }
-      } catch (error: unknown) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to reset password"
-        );
+        await navigator.clipboard.writeText(result.tempPassword)
+        toast.success("Temporary password generated & copied")
+      } catch {
+        toast.success("Temporary password generated")
       }
-    });
-  };
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to reset password"
+      )
+    }
+  })
+}
 
   const copyPassword = async () => {
     if (!tempPassword) return;

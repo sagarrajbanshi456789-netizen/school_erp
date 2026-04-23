@@ -19,7 +19,7 @@ export default function LevelTemplate({
   children,
 }: LevelTemplateProps) {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-12">
+    <main className="mx-auto max-w-7xl px-4 py-12 pt-0">
 
       {/* Back Button */}
       {showBackButton && (

@@ -34,9 +34,9 @@ export async function createEmployee(data: {
 		body: {
 			email: data.email,
 			password: tempPassword,
-			name: data.name,
-			// role: "EMPLOYEE",
+			name: data.name,			
 		},
+		headers: await headers(), // MUST be here to authenticate the request
 	});
 
 	revalidatePath("/admin/dashboard/employees");
@@ -102,7 +102,7 @@ export async function resetEmployeePassword(employeeId: string) {
 	if (!employeeId) {
 		throw new Error("Employee ID is required");
 	}
-
+try {
 	const tempPassword = generateTempPassword();
 
 	await auth.api.setUserPassword({
@@ -110,13 +110,17 @@ export async function resetEmployeePassword(employeeId: string) {
 			userId: employeeId,
 			newPassword: tempPassword,
 		},
-		headers: await headers(),
+		headers: await headers(), // MUST be here
 	});
 
 	revalidatePath("/admin/dashboard/employees");
 
 	return {
 		success: true,
-		tempPassword
+		tempPassword,
 	};
+	} catch (error) {
+		console.error("Failed to reset password:", error);
+		throw new Error(error instanceof Error ? error.message : "Failed to reset password");
+	}
 }

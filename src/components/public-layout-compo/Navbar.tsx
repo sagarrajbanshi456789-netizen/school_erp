@@ -14,7 +14,9 @@ import {
   Settings,
   ChevronDown,
   Home,
-  LogOut
+  LogOut,
+  LogIn,
+  UserPlus,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { authClient } from "@/lib/auth-client"
@@ -79,8 +81,8 @@ export function Navbar() {
 
           {!isPending && !session && (
             <>
-              <Button variant="outline" onClick={() => openModal("login")}>Login</Button>
-              <Button onClick={() => openModal("signup")}>Signup</Button>
+              <Button className="flex items-center gap-2" variant="outline" onClick={() => openModal("login")}><LogIn size={16} />Login</Button>
+              <Button className="flex items-center gap-2" variant="outline" onClick={() => openModal("signup")}><UserPlus size={16} />Signup</Button>
             </>
           )}
 
@@ -128,12 +130,13 @@ export function Navbar() {
                         <Settings size={16} /> Settings
                       </DropdownItem>
                       <div className="border-t border-gray-200 dark:border-gray-700" />
-                      <button
+                      <Button
+                        variant="ghost"
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="w-full justify-start gap-2  text-red-500 hover:text-red-600"
                       >
-                        <LogOut size={16} /> Logout
-                      </button>
+                        <LogOut className="h-4 w-4" /> Logout
+                      </Button>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -164,15 +167,25 @@ export function Navbar() {
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -20, opacity: 0 }}
-            className="absolute top-16 left-0 w-full bg-background border-b shadow-md md:hidden z-40 transition-colors duration-300"
+            className="
+              absolute top-16 left-0 w-full md:hidden z-40
+              bg-white dark:bg-black
+              border-b border-gray-200 dark:border-gray-800
+              shadow-sm
+              transition-colors duration-300
+            "
           >
             <div className="flex flex-col gap-3 p-4">
               {isPending && <MobileSkeleton />}
 
               {!isPending && !session && (
                 <>
-                  <Button onClick={() => { openModal("login"); closeMenu(); }}>Login</Button>
-                  <Button onClick={() => { openModal("signup"); closeMenu(); }}>Signup</Button>
+                  <Button className="flex items-center gap-2" variant="outline" onClick={() => { openModal("login"); closeMenu(); }}>
+                    <LogIn size={16} /> Login
+                  </Button>
+                  <Button className="flex items-center gap-2" variant="outline" onClick={() => { openModal("signup"); closeMenu(); }}>
+                    <UserPlus size={16} /> Signup
+                  </Button>
                 </>
               )}
 
@@ -191,15 +204,19 @@ export function Navbar() {
                     <Settings size={16} /> Settings
                   </MobileItem>
                   <Button
-                    variant="destructive"
-                    className="flex items-center gap-2"
+                    variant="outline"
+                    className="w-full flex items-center gap-2  text-red-500 hover:text-red-600"
                     onClick={handleLogout}
                   >
-                    <LogOut size={16} /> Logout
+                    <LogOut className="h-4 w-4" /> Logout
                   </Button>
                 </>
               )}
             </div>
+            <hr />
+            <hr />
+            <hr />
+            <hr />
           </motion.div>
         )}
       </AnimatePresence>
@@ -220,13 +237,12 @@ function DropdownItem({
 }) {
   return (
     <Link href={href}>
-     <div
-  className={`flex items-center gap-2 px-4 py-2 text-sm cursor-pointer rounded-md transition-colors duration-300 ${
-    active
-      ? "bg-primary text-white"
-      : "hover:bg-gray-100 dark:hover:bg-gray-800"
-  }`}
->
+      <div
+        className={`flex items-center gap-2 px-4 py-2 text-sm cursor-pointer rounded-md transition-colors duration-300 ${active
+          ? "bg-primary text-white"
+          : "hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+      >
         {children}
       </div>
     </Link>
