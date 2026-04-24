@@ -102,6 +102,22 @@ export async function resetEmployeePassword(employeeId: string) {
 	if (!employeeId) {
 		throw new Error("Employee ID is required");
 	}
+		const userHeaders = await headers();
+	// Debug: Check current user's session
+	const session = await auth.api.getSession({
+		headers: userHeaders,
+	});
+	console.log("Current user:", session?.user?.id, "Role:", session?.user?.role);
+	// Check if user has permission
+	const permissionCheck = await auth.api.userHasPermission({
+		body: {
+			userId: session?.user?.id,
+			permissions: { user: ["set-password"] }
+		},
+		headers: userHeaders,
+	});
+	console.log("Has set-password permission:", permissionCheck);
+
 try {
 	const tempPassword = generateTempPassword();
 

@@ -58,14 +58,20 @@ function useAddEmployee() {
   useEffect(() => {
     async function checkPermission() {
       try {
-        const { data, error } = await authClient.admin.hasPermission({
-          permissions: { user: ["create"] },
-        });
-      console.log("Permission success:", data?.success);
-      console.log("Permission data:", data);
-			console.log("Permission check error:", error); // [!code highlight]
+        const session = await authClient.getSession();
 
-        setIsAdmin(Boolean(data?.success));
+    const isAdmin =
+      session?.data?.user?.role === "ADMIN";
+
+    setIsAdmin(isAdmin);
+        // const { data, error } = await authClient.admin.hasPermission({
+        //   permissions: { user: ["create"] },
+        // });
+      // console.log("Permission success:", data?.success);
+      // console.log("Permission data:", data);
+			// console.log("Permission check error:", error); // [!code highlight]
+
+      //   setIsAdmin(Boolean(data?.success));
       } catch {
         setIsAdmin(false);
       } finally {
@@ -219,9 +225,9 @@ export default function AddEmployeeDialog() {
     return <Button disabled className="animate-pulse">Checking Permission...</Button>;
   }
 
-  // if (!isAdmin) {
-  //   return <Button disabled>Add Employee</Button>;
-  // }
+  if (!isAdmin) {
+    return <Button disabled>Add Employee</Button>;
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

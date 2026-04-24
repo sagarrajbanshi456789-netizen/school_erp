@@ -1,137 +1,143 @@
-
-// src/app/employee/dashboard/page.tsx
 'use client'
 
-import Link from 'next/link' // For client-side navigation
-import { BookOpen, Clock, CheckCircle } from 'lucide-react' // Icons
-import { useBetterAuth } from '@/lib/useBetterAuth' // Custom authentication hook
+import React, { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { BookOpen, CheckCircle, Clock, RefreshCw, TrendingUp, Plus, Pencil } from 'lucide-react'
+import { useBetterAuth } from '@/lib/useBetterAuth'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+
+type Book = {
+  id: number
+  title: string
+  totalPages: number
+  completedPages: number
+  publication?: string
+}
 
 export default function EmployeeDashboard() {
-  // Sample assigned books (later this will come from DB)
-  const assignedBooks = [
-    { id: 1, title: "Class 3 Math - Asmita", totalPages: 120, completedPages: 35 },
-    { id: 2, title: "Class 3 Science - Nima", totalPages: 98, completedPages: 12 },
-  ]
+  const { user } = useBetterAuth()
+  const [assignedBooks, setAssignedBooks] = useState<Book[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const { user } = useBetterAuth() // Get current logged-in user
+  async function loadDashboard() {
+    try {
+      setLoading(true)
+      setError('')
+      const res = await fetch('/api/employee/dashboard', { cache: 'no-store' })
+      if (!res.ok) throw new Error('Failed to load dashboard')
+      const data = await res.json()
+      setAssignedBooks(data.assignedBooks || [])
+    } catch (e) {
+      setError('Unable to load dashboard data.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadDashboard() }, [])
+
+  const stats = useMemo(() => {
+    const totalBooks = assignedBooks.length
+    const totalPages = assignedBooks.reduce((s, b) => s + b.totalPages, 0)
+    const completed = assignedBooks.reduce((s, b) => s + b.completedPages, 0)
+    const pending = totalPages - completed
+    const rate = totalPages ? Math.round((completed / totalPages) * 100) : 0
+    return { totalBooks, totalPages, completed, pending, rate }
+  }, [assignedBooks])
+
+  const firstBook = assignedBooks[0]
 
   return (
-    <div className="space-y-8">
-      {/* 👋 Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-1 text-gray-900 dark:text-gray-100">
-          Welcome back {user?.name || "Employee"} 👋
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Here’s an overview of your assigned book work.
-        </p>
+    <div className='space-y-8'>
+      <Card className='border-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white'>
+        <CardContent className='p-6 space-y-3'>
+          <h1 className='text-3xl font-bold'>Welcome back {user?.name || 'Employee'} 👋</h1>
+          <p className='text-blue-100'>Track your assigned books and finish pages faster.</p>
+          <Progress value={stats.rate} className='h-3 bg-white/20' />
+          <p className='text-sm text-blue-100'>Overall Completion: {stats.rate}%</p>
+        </CardContent>
+      </Card>
+
+      <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+        <StatCard title='Assigned Books' value={String(stats.totalBooks)} icon={<BookOpen className='h-5 w-5' />} />
+        <StatCard title='Completed Pages' value={String(stats.completed)} icon={<CheckCircle className='h-5 w-5' />} />
+        <StatCard title='Pending Pages' value={String(stats.pending)} icon={<Clock className='h-5 w-5' />} />
+        <StatCard title='Completion Rate' value={`${stats.rate}%`} icon={<TrendingUp className='h-5 w-5' />} />
       </div>
 
-      {/* 📊 Stats Row */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon={<BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
-          title="Assigned Books"
-          value={assignedBooks.length.toString()}
-        />
-        <StatCard
-          icon={<Clock className="w-6 h-6 text-orange-500 dark:text-orange-400" />}
-          title="Pages In Progress"
-          value="18"
-        />
-        <StatCard
-          icon={<CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />}
-          title="Pages Completed"
-          value="47"
-        />
+      <div className='flex flex-wrap gap-3'>
+        <Button variant='outline' onClick={loadDashboard}><RefreshCw className='mr-2 h-4 w-4' />Refresh</Button>
+        {firstBook && <Link href={`/employee/books/${firstBook.id}/pages/new`}><Button><Plus className='mr-2 h-4 w-4' />Add New Page</Button></Link>}
+        {firstBook && <Link href={`/employee/books/${firstBook.id}/pages`}><Button variant='secondary'><Pencil className='mr-2 h-4 w-4' />Continue Editing</Button></Link>}
       </div>
 
-      {/* 📚 Assigned Books Section */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Your Books</h2>
+      <Card>
+        <CardHeader className='flex flex-row items-center justify-between'>
+          <CardTitle>Your Assigned Books</CardTitle>
+          <Badge variant='secondary'>{stats.totalBooks} Active</Badge>
+        </CardHeader>
+        <CardContent>
+          {loading && (
+            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className='h-36 rounded-xl' />)}
+            </div>
+          )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {assignedBooks.map((book) => {
-            const progress = Math.round(
-              (book.completedPages / book.totalPages) * 100
-            )
+          {!loading && error && <p className='text-sm text-red-500'>{error}</p>}
 
-            return (
-              <Link
-                key={book.id} // Unique key for list
-                href={`/employee/books/${book.id}/pages`} // Link to book pages
-                className="block p-5 bg-white dark:bg-gray-800 rounded-2xl shadow hover:shadow-md transition border border-gray-200 dark:border-gray-700"
-              >
-                {/* Book title and page count */}
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{book.title}</h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-300">
-                    {book.completedPages}/{book.totalPages} pages
-                  </span>
-                </div>
+          {!loading && !error && assignedBooks.length === 0 && (
+            <div className='rounded-xl border border-dashed p-10 text-center text-muted-foreground'>No books assigned yet.</div>
+          )}
 
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
-                  <div
-                    className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-
-                <p className="text-sm text-gray-500 dark:text-gray-300">
-                  {progress}% completed
-                </p>
-              </Link>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ⚡ Quick Actions */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Quick Actions</h2>
-
-        <div className="flex flex-wrap gap-4">
-          {/* Add New Page button */}
-          <Link
-            href="/employee/books/1/pages/new"
-            className="px-5 py-3 bg-green-600 dark:bg-green-500 text-white rounded-xl shadow hover:bg-green-700 dark:hover:bg-green-600 transition"
-          >
-            ➕ Add New Page
-          </Link>
-
-          {/* Continue Editing button */}
-          <Link
-            href="/employee/books/1/pages"
-            className="px-5 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-xl shadow hover:bg-blue-700 dark:hover:bg-blue-600 transition"
-          >
-            ✏️ Continue Editing
-          </Link>
-        </div>
-      </div>
+          {!loading && !error && assignedBooks.length > 0 && (
+            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
+              {assignedBooks.map((book) => {
+                const progress = book.totalPages ? Math.round((book.completedPages / book.totalPages) * 100) : 0
+                return (
+                  <Link key={book.id} href={`/employee/books/${book.id}/pages`}>
+                    <Card className='h-full transition-all hover:-translate-y-1 hover:shadow-lg'>
+                      <CardContent className='p-5 space-y-3'>
+                        <div className='flex items-start justify-between gap-3'>
+                          <div>
+                            <h3 className='font-semibold'>{book.title}</h3>
+                            {book.publication && <p className='text-xs text-muted-foreground'>{book.publication}</p>}
+                          </div>
+                          <Badge>{book.completedPages}/{book.totalPages}</Badge>
+                        </div>
+                        <Progress value={progress} className='h-2' />
+                        <div className='flex items-center justify-between text-sm text-muted-foreground'>
+                          <span>{progress}% completed</span>
+                          <span>{book.totalPages - book.completedPages} pending</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-// StatCard component for dashboard stats
-function StatCard({
-  icon,
-  title,
-  value,
-}: {
-  icon: React.ReactNode
-  title: string
-  value: string
-}) {
+function StatCard({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-4 p-5 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700">
-      {/* Icon box */}
-      <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-xl">{icon}</div>
-      {/* Text */}
-      <div>
-        <p className="text-sm text-gray-500 dark:text-gray-300">{title}</p>
-        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-      </div>
-    </div>
+    <Card>
+      <CardContent className='p-5 flex items-center gap-4'>
+        <div className='rounded-xl bg-muted p-3'>{icon}</div>
+        <div>
+          <p className='text-sm text-muted-foreground'>{title}</p>
+          <p className='text-2xl font-bold'>{value}</p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
+

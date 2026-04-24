@@ -197,7 +197,8 @@ model AssignedBook {
 
   employeeId    String
   publicationId String
-
+completedPages Int @default(0)
+  status         String @default("IN_PROGRESS")
   employee    User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
 
