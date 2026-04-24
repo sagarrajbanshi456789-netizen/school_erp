@@ -1,40 +1,47 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth' // adjust if different
 
 export async function GET(req: Request) {
   try {
-    const session = await auth.api.getSession({
-      headers: req.headers,
-    })
+    const session = await auth()
 
-    if (!session?.user) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const books = await prisma.assignedBook.findMany({
-      where: {
-        employeeId: session.user.id,
-      },
+    const employeeId = session.user.id
+
+    const assignedBooks = await prisma.assignedBook.findMany({
+      where: { employeeId },
       include: {
-        publication: true,
+        publication: {
+          include: {
+            pages: true,
+          },
+        },
       },
     })
 
-    const assignedBooks = books.map((item) => ({
-      id: item.publication.id,
-      title: item.publication.title,
-    //   totalPages: item.publication.totalPages ?? 0,
-    //   completedPages: item.publication.completedPages ?? 0,
-      publication: item.publication.title,
-    }))
+    const formatted = assignedBooks.map((b) => {
+      const totalPages = b.publication.pages.length
+      const completedPages = b.completedPages
 
-    return NextResponse.json({ assignedBooks })
-  } catch (error) {
-    console.error('Employee dashboard API error:', error)
+      return {
+        id: b.publication.id,
+        title: b.publication.title,
+        publication: b.publication.title,
+        totalPages,
+        completedPages,
+      }
+    })
 
+    return NextResponse.json({
+      assignedBooks: formatted,
+    })
+  } catch (err) {
     return NextResponse.json(
-      { message: 'Internal Server Error' },
+      { error: 'Server error' },
       { status: 500 }
     )
   }

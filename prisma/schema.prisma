@@ -203,8 +203,17 @@ completedPages Int @default(0)
   publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+  @@index([employeeId])
+@@index([publicationId])
 
   @@unique([employeeId, publicationId])
+}
+
+model PageProgress {
+  id        String @id @default(cuid())
+  userId    String
+  pageId    String
+  completed Boolean @default(false)
 }
 
 //////////////////////////////////////////////////////
