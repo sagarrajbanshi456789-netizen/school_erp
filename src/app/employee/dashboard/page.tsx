@@ -1,3 +1,4 @@
+// src/app/employee/dashboard/page.tsx
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -20,8 +21,6 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 
-/* ---------------- TYPES ---------------- */
-
 type Book = {
   id: string
   title: string
@@ -30,49 +29,31 @@ type Book = {
   publication?: string
 }
 
-type Stats = {
-  totalBooks: number
-  totalPages: number
-  completedPages: number
-}
-
-/* ---------------- PAGE ---------------- */
-
 export default function EmployeeDashboard() {
   const { user } = useBetterAuth()
 
   const [books, setBooks] = useState<Book[]>([])
-  const [stats, setStats] = useState<Stats>({
-    totalBooks: 0,
-    totalPages: 0,
-    completedPages: 0,
-  })
-
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  /* ---------------- LOAD DATA ---------------- */
 
   async function loadDashboard() {
     try {
       setLoading(true)
       setError('')
 
-      const [statsRes, booksRes] = await Promise.all([
-        fetch('/api/employee/dashboard', { cache: 'no-store' }),
-        fetch('/api/employee/books', { cache: 'no-store' }),
-      ])
+      const res = await fetch('/api/employee/dashboard', {
+        cache: 'no-store',
+      })
 
-      if (!statsRes.ok || !booksRes.ok) {
-        throw new Error('Failed to load dashboard')
-      }
+      if (!res.ok) throw new Error('Failed to load dashboard')
 
-      const statsData = await statsRes.json()
-      const booksData = await booksRes.json()
+      const data = await res.json()
 
-      setStats(statsData)
-      setBooks(booksData || [])
+      console.log('📊 DASHBOARD RESPONSE:', data)
+
+      setBooks(data.assignedBooks || [])
     } catch (e) {
+      console.error(e)
       setError('Unable to load dashboard data.')
     } finally {
       setLoading(false)
@@ -85,16 +66,25 @@ export default function EmployeeDashboard() {
 
   /* ---------------- CALCULATIONS ---------------- */
 
-  const pendingPages =
-    stats.totalPages - stats.completedPages
+  const stats = useMemo(() => {
+    const totalBooks = books.length
+    const totalPages = books.reduce((s, b) => s + b.totalPages, 0)
+    const completedPages = books.reduce((s, b) => s + b.completedPages, 0)
+    const pendingPages = totalPages - completedPages
+    const rate = totalPages
+      ? Math.round((completedPages / totalPages) * 100)
+      : 0
 
-  const completionRate = stats.totalPages
-    ? Math.round((stats.completedPages / stats.totalPages) * 100)
-    : 0
+    return {
+      totalBooks,
+      totalPages,
+      completedPages,
+      pendingPages,
+      rate,
+    }
+  }, [books])
 
   const firstBook = books[0]
-
-  /* ---------------- UI ---------------- */
 
   return (
     <div className="space-y-8">
@@ -109,12 +99,12 @@ export default function EmployeeDashboard() {
           <p className="text-blue-100">
             Track your assigned books and finish pages faster.
           </p>
-
-          <Progress value={completionRate} className="h-3 bg-white/20" />
+{/* 
+          <Progress value={stats.rate} className="h-3 bg-white/20" />
 
           <p className="text-sm text-blue-100">
-            Overall Completion: {completionRate}%
-          </p>
+            Overall Completion: {stats.rate}%
+          </p> */}
         </CardContent>
       </Card>
 
@@ -122,8 +112,8 @@ export default function EmployeeDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Assigned Books" value={String(stats.totalBooks)} icon={<BookOpen className="h-5 w-5" />} />
         <StatCard title="Completed Pages" value={String(stats.completedPages)} icon={<CheckCircle className="h-5 w-5" />} />
-        <StatCard title="Pending Pages" value={String(pendingPages)} icon={<Clock className="h-5 w-5" />} />
-        <StatCard title="Completion Rate" value={`${completionRate}%`} icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard title="Pending Pages" value={String(stats.pendingPages)} icon={<Clock className="h-5 w-5" />} />
+        <StatCard title="Completion Rate" value={`${stats.rate}%`} icon={<TrendingUp className="h-5 w-5" />} />
       </div>
 
       {/* ACTIONS */}
@@ -160,7 +150,6 @@ export default function EmployeeDashboard() {
         </CardHeader>
 
         <CardContent>
-          {/* loading */}
           {loading && (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -169,26 +158,21 @@ export default function EmployeeDashboard() {
             </div>
           )}
 
-          {/* error */}
           {!loading && error && (
             <p className="text-sm text-red-500">{error}</p>
           )}
 
-          {/* empty */}
           {!loading && !error && books.length === 0 && (
             <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
               No books assigned yet.
             </div>
           )}
 
-          {/* books */}
           {!loading && !error && books.length > 0 && (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {books.map((book) => {
                 const progress = book.totalPages
-                  ? Math.round(
-                      (book.completedPages / book.totalPages) * 100
-                    )
+                  ? Math.round((book.completedPages / book.totalPages) * 100)
                   : 0
 
                 return (
@@ -210,8 +194,8 @@ export default function EmployeeDashboard() {
                             {book.completedPages}/{book.totalPages}
                           </Badge>
                         </div>
-
-                        <Progress value={progress} className="h-2" />
+{/* <Progress value={stats.rate} className="h-3 bg-black/20" /> */}
+                        <Progress value={progress} className="h-2 bg-white/20" />
 
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
                           <span>{progress}% completed</span>
@@ -230,8 +214,6 @@ export default function EmployeeDashboard() {
     </div>
   )
 }
-
-/* ---------------- STAT CARD ---------------- */
 
 function StatCard({
   title,
