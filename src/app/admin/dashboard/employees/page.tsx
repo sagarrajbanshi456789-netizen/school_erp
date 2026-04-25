@@ -1,5 +1,5 @@
 // src/app/admin/dashboard/employees/page.tsx
-
+import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import AddEmployeeDialog from "@/components/employee/AddEmployeeDialog"
 import EditEmployeeDialog from "@/components/employee/EditEmployeeDialog"
@@ -52,7 +52,13 @@ export default async function EmployeesPage({ searchParams }: Props) {
       },
     }),
 
-    prisma.publication.findMany(),
+    prisma.publication.findMany({
+      select: {
+        id: true,
+        title: true,
+        totalPages: true,
+      },
+    }),
 
     prisma.user.count({ where }),
   ])
@@ -90,7 +96,7 @@ Object.keys(grouped).forEach((id) => {
     return acc
   }, {} as Record<string, string[]>)
 
-  const totalPages = Math.ceil(total / pageSize)
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const deviceIcons: Record<string, string> = {
     Mobile: "📱",
@@ -222,7 +228,7 @@ Object.keys(grouped).forEach((id) => {
                       {/* Books */}
                       <td className="p-3">
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded text-xs">
-                          {assignedCount[emp.id] || 0} Books
+                          {assignedCount[emp.id] ?? 0} Books
                         </span>
                       </td>
 
@@ -263,6 +269,7 @@ Object.keys(grouped).forEach((id) => {
                           employeeId={emp.id}
                           publications={publications}
                           assigned={assignedByEmployee[emp.id] || []}
+                          allAssignedBooks={assigned}
                         />
 
                         <ResetEmployeePasswordDialog
@@ -284,46 +291,60 @@ Object.keys(grouped).forEach((id) => {
       </div>
 
       {/* PAGINATION */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-sm">
+      {/* PAGINATION */}
+<div className="flex flex-col md:flex-row justify-between items-center gap-3 text-sm">
+  <p className="text-gray-600 dark:text-gray-400">
+    Page {page} of {totalPages}
+  </p>
 
-        <p className="text-gray-600 dark:text-gray-400">
-          Page {page} of {totalPages}
-        </p>
+  <div className="flex flex-wrap items-center gap-2">
+    {/* Prev */}
+    {page > 1 && (
+      <Link
+        href={`?search=${encodeURIComponent(search)}&page=${page - 1}`}
+        scroll={false}
+        prefetch
+        className="px-3 py-1 border rounded dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+      >
+        Prev
+      </Link>
+    )}
 
-        <div className="flex flex-wrap gap-2">
-          {page > 1 && (
-            <a
-              href={`?search=${search}&page=${page - 1}`}
-              className="px-3 py-1 border rounded dark:border-gray-700"
-            >
-              Prev
-            </a>
-          )}
+    {/* Page Numbers */}
+    {Array.from({ length: totalPages }, (_, i) => {
+      const pageNumber = i + 1
+      const active = page === pageNumber
 
-          {Array.from({ length: totalPages }, (_, i) => (
-            <a
-              key={i}
-              href={`?search=${search}&page=${i + 1}`}
-              className={`px-3 py-1 border rounded dark:border-gray-700 ${
-                page === i + 1
-                  ? "bg-blue-500 text-white"
-                  : "text-gray-700 dark:text-gray-300"
-              }`}
-            >
-              {i + 1}
-            </a>
-          ))}
+      return (
+        <Link
+          key={pageNumber}
+          href={`?search=${encodeURIComponent(search)}&page=${pageNumber}`}
+          scroll={false}
+          prefetch
+          className={`px-3 py-1 border rounded transition ${
+            active
+              ? "bg-blue-500 text-white border-blue-500"
+              : "text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+        >
+          {pageNumber}
+        </Link>
+      )
+    })}
 
-          {page < totalPages && (
-            <a
-              href={`?search=${search}&page=${page + 1}`}
-              className="px-3 py-1 border rounded dark:border-gray-700"
-            >
-              Next
-            </a>
-          )}
-        </div>
-      </div>
+    {/* Next */}
+    {page < totalPages && (
+      <Link
+        href={`?search=${encodeURIComponent(search)}&page=${page + 1}`}
+        scroll={false}
+        prefetch
+        className="px-3 py-1 border rounded dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+      >
+        Next
+      </Link>
+    )}
+  </div>
+</div>
 
     </div>
   )

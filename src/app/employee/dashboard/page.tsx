@@ -99,12 +99,6 @@ export default function EmployeeDashboard() {
           <p className="text-blue-100">
             Track your assigned books and finish pages faster.
           </p>
-{/* 
-          <Progress value={stats.rate} className="h-3 bg-white/20" />
-
-          <p className="text-sm text-blue-100">
-            Overall Completion: {stats.rate}%
-          </p> */}
         </CardContent>
       </Card>
 
@@ -194,7 +188,6 @@ export default function EmployeeDashboard() {
                             {book.completedPages}/{book.totalPages}
                           </Badge>
                         </div>
-{/* <Progress value={stats.rate} className="h-3 bg-black/20" /> */}
                         <Progress value={progress} className="h-2 bg-white/20" />
 
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
