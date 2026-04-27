@@ -1,3 +1,4 @@
+
 // prisma/seed.ts
 /// <reference types="node" />
 import "dotenv/config"
@@ -22,33 +23,86 @@ const slugify = (text: string) =>
 /* Generate Demo Page Content */
 /* --------------------- */
 function generatePageContent(subject: string, className: string, page: number) {
-  return `
-  <div style="font-family: system-ui; line-height:1.6">
-    <h1>${subject}</h1>
-    <h2>Chapter ${page}</h2>
-    <p>This is demo content for <strong>${subject}</strong> for <strong>${className}</strong>.</p>
-    <p>This page exists to test book flip animation, page layout and rendering.</p>
-    <h3>Learning Objectives</h3>
+  const imageSeed = (page % 8) + 1
+
+  const html = `
+  <div style="font-family: system-ui; line-height:1.7; padding:12px">
+
+    <h1 style="color:#4f46e5">${subject}</h1>
+    <h2>📘 Chapter ${page} - ${className}</h2>
+
+    <p>
+      This is a <strong>${subject}</strong> lesson designed for <strong>${className}</strong>.
+      It includes structured learning, visuals, and practice.
+    </p>
+
+    <img 
+      src="https://source.unsplash.com/900x450/?${subject},education,learning"
+      style="width:100%; border-radius:12px; margin:15px 0;"
+    />
+
+    <h3>🎯 Learning Objectives</h3>
     <ul>
-      <li>Understand core concept</li>
-      <li>Practice exercises</li>
-      <li>Visual learning</li>
-      <li>Examples & explanation</li>
+      <li>Understand core ${subject} concepts</li>
+      <li>Develop problem-solving skills</li>
+      <li>Learn through visuals</li>
+      <li>Prepare for exams</li>
     </ul>
-    <h3>Example</h3>
-    <p>Example ${page}: This demonstrates structured educational content formatting.</p>
-    <div style="
-      background:#f5f5f5;
-      padding:12px;
-      border-radius:8px;
-      margin-top:12px;
-    ">
-      Tip: Books should flip smoothly with content like this.
+
+    <h3>📚 Core Concept</h3>
+    <p>
+      ${subject} is an important topic in ${className}.
+      This chapter explains it in a simple and structured way.
+    </p>
+
+    <img 
+      src="https://source.unsplash.com/900x450/?school,study,${imageSeed}"
+      style="width:100%; border-radius:12px; margin:15px 0;"
+    />
+
+    <h3>🧪 Example</h3>
+    <div style="background:#f3f4f6; padding:12px; border-radius:10px;">
+      <strong>Example ${page}:</strong>
+      <p>Practical application of ${subject} with real-world understanding.</p>
     </div>
+
+    <h3>📌 Key Points</h3>
+    <ol>
+      <li>Core concept of ${subject}</li>
+      <li>Step-by-step understanding</li>
+      <li>Practice improves mastery</li>
+    </ol>
+
+    <img 
+      src="https://source.unsplash.com/900x450/?diagram,education,${page}"
+      style="width:100%; border-radius:12px; margin:15px 0;"
+    />
+
+    <div style="
+      margin-top:15px;
+      padding:15px;
+      border-left:5px solid #22c55e;
+      background:#ecfdf5;
+      border-radius:8px;
+    ">
+      💡 Tip: Practice ${subject} daily for better results.
+    </div>
+
   </div>
   `
-}
 
+  const text = `
+${subject} - Chapter ${page} (${className})
+
+Topics:
+- Core concepts
+- Examples
+- Practice questions
+- Key points
+`
+
+  return { html, text }
+}
 /* --------------------- */
 /* Main */
 /* --------------------- */
@@ -71,7 +125,6 @@ async function main() {
         email: adminEmail,
         password: adminPassword,
         name: "Super Admin",
-        role: "ADMIN",
       },
     })
 
@@ -257,27 +310,35 @@ async function main() {
         },
       })
 
-      for (let i = 1; i <= 20; i++) {
-        await prisma.publicationPage.upsert({
-          where: {
-            publicationId_pageNumber: {
-              publicationId: publication.id,
-              pageNumber: i,
-            },
-          },
-          update: {},
-          create: {
-            pageNumber: i,
-            title: `Page ${i}`,
-            content: generatePageContent(
-              subject.name,
-              subject.class.name,
-              i
-            ),
-            publicationId: publication.id,
-          },
-        })
-      }
+for (let i = 1; i <= 20; i++) {
+  const pageContent = generatePageContent(
+    subject.name,
+    subject.class.name,
+    i
+  )
+
+  await prisma.publicationPage.upsert({
+    where: {
+      publicationId_pageNumber: {
+        publicationId: publication.id,
+        pageNumber: i,
+      },
+    },
+    update: {},
+    create: {
+      pageNumber: i,
+      title: `Page ${i}`,
+
+      contentJson: {
+        html: pageContent.html,
+      },
+
+      contentText: pageContent.text,
+
+      publicationId: publication.id,
+    }
+  })
+}
     }
   }
 
@@ -306,7 +367,6 @@ async function main() {
           email: user.email,
           password: "password123",
           name: user.name,
-          role: "USER",
         },
       })
     }

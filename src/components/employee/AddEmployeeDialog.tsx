@@ -55,44 +55,26 @@ function useAddEmployee() {
   /* =========================
      PERMISSION CHECK
   ========================= */
-  useEffect(() => {
-    async function checkPermission() {
-      try {
-        const session = await authClient.getSession();
+useEffect(() => {
+  async function checkPermission() {
+    try {
+      const session = await authClient.getSession();
 
-    const isAdmin =
-      session?.data?.user?.role === "ADMIN";
+      console.log("Current Session:", session);
+      console.log("User:", session?.data?.user);
 
-    setIsAdmin(isAdmin);
-        // const { data, error } = await authClient.admin.hasPermission({
-        //   permissions: { user: ["create"] },
-        // });
-      // console.log("Permission success:", data?.success);
-      // console.log("Permission data:", data);
-			// console.log("Permission check error:", error); // [!code highlight]
+      const userRole = session?.data?.user?.role;
 
-      //   setIsAdmin(Boolean(data?.success));
-      } catch {
-        setIsAdmin(false);
-      } finally {
-        setIsCheckingPermission(false);
-      }
+      setIsAdmin(userRole === "ADMIN");
+    } catch (error) {
+      console.error("Permission check failed:", error);
+      setIsAdmin(false);
+    } finally {
+      setIsCheckingPermission(false);
     }
-
-    checkPermission();
-  }, []);
-
-
-
-  useEffect(() => {
-  async function checkUser() {
-    const session = await authClient.getSession();
-
-    console.log("Current Session:", session);
-    console.log("User:", session?.data?.user);
   }
 
-  checkUser();
+  checkPermission();
 }, []);
   /* =========================
      SUBMIT
@@ -226,7 +208,7 @@ export default function AddEmployeeDialog() {
   }
 
   if (!isAdmin) {
-    return <Button disabled>Add Employee</Button>;
+    return <Button disabled title="Admin access required">Add Employee</Button>;
   }
 
   return (

@@ -49,7 +49,7 @@ model MatchmakingQueue {
   id String @id @default(cuid())
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   gameType    String @default("CHESS")
   timeControl String @default("10+0")
@@ -182,7 +182,7 @@ model PublicationPage {
   id         String  @id @default(cuid())
   pageNumber Int
   title      String?
-
+contentHtml String? @db.Text
   contentJson     Json? // MAIN (TipTap source)
   contentText     String?        @db.Text // search/index
   pageProgress    PageProgress[]

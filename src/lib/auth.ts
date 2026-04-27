@@ -28,7 +28,23 @@ export const auth = betterAuth({
 		"http://localhost:3000",
 		NEXT_PUBLIC_APP_URL,
 	].filter(Boolean),
+user: {
+  additionalFields: {
+    role: {
+      type: "string",
+      required: true,
+      defaultValue: "EMPLOYEE",
+    },
+  },
+},
 
+session: {
+  additionalFields: {
+    role: {
+		type: "string",
+	}
+  },
+},
 
 
 	//--------------------------------------------------
@@ -121,7 +137,7 @@ export const auth = betterAuth({
 		admin({
 			defaultRole: "EMPLOYEE",
 			adminRoles: ["ADMIN"],		
-			adminUserIds: ["FuHTibdhyAjcS64HWHQRseZKBJ9zYyWA"], // Your current user ID
+			adminUserIds: ["DRucRDCaT1fvj4b3OezPPD90FmViDhKy"], // Your current user ID
 			// This bypasses role checks for this specific user
 		})
 	],
