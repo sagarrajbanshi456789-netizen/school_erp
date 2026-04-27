@@ -1,4 +1,3 @@
-// src/app/api/employee/dashboard/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
@@ -7,25 +6,19 @@ export async function GET(req: Request) {
   try {
     console.log('================ DASHBOARD API HIT ================')
 
-    // 1. SESSION CHECK
     const session = await auth.api.getSession({
       headers: req.headers,
     })
 
-    console.log('SESSION RESPONSE:', session)
-
     if (!session?.user?.id) {
-      console.log('❌ No session user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const employeeId = session.user.id
-    console.log('✅ EMPLOYEE ID:', employeeId)
 
-    // 2. CHECK USER EXISTS IN DB
     const userCheck = await prisma.user.findUnique({
       where: { id: employeeId },
-       select: {
+      select: {
         id: true,
         name: true,
         email: true,
@@ -33,45 +26,37 @@ export async function GET(req: Request) {
       },
     })
 
-    console.log('👤 USER IN DB:', userCheck)
-
     if (!userCheck) {
-      console.log('❌ USER NOT FOUND IN DATABASE')
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // 3. FETCH ASSIGNED BOOKS (RAW)
     const assignedBooks = await prisma.assignedBook.findMany({
       where: { employeeId },
       include: {
         publication: {
-          include: {
-            pages: true,
+          select: {
+            id: true,
+            title: true,
+            totalPages: true,
           },
         },
       },
     })
 
-    console.log('📚 RAW ASSIGNED BOOKS:', JSON.stringify(assignedBooks, null, 2))
+    const formatted = assignedBooks
+      .map((b) => {
+        if (!b.publication) return null
 
-    // 4. CHECK COUNT
-    console.log('📊 ASSIGNED BOOKS COUNT:', assignedBooks.length)
+        return {
+          id: b.publication.id,
+          title: b.publication.title,
+          publication: b.publication.title,
+          totalPages: b.publication.totalPages || 0,
+          completedPages: b.completedPages || 0,
+        }
+      })
+      .filter(Boolean)
 
-    // 5. FORMAT RESPONSE
-    const formatted = (assignedBooks || []).map((b) => {
-      console.log('➡️ Mapping book:', b.publication?.title)
-
-      return {
-        id: b.publication.id,
-        title: b.publication.title,
-        publication: b.publication.title,
-        totalPages: b.publication.pages?.length || 0,
-        completedPages: b.completedPages || 0,
-      }
-    })
-
-    console.log('✅ FORMATTED RESPONSE:', formatted)
-
-    // 6. FINAL RESPONSE
     return NextResponse.json({
       assignedBooks: formatted,
     })
