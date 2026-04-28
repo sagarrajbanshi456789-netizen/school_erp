@@ -179,10 +179,10 @@ model Publication {
 }
 
 model PublicationPage {
-  id         String  @id @default(cuid())
-  pageNumber Int
-  title      String?
-contentHtml String? @db.Text
+  id              String         @id @default(cuid())
+  pageNumber      Int
+  title           String?
+  contentHtml     String?        @db.Text
   contentJson     Json? // MAIN (TipTap source)
   contentText     String?        @db.Text // search/index
   pageProgress    PageProgress[]
@@ -225,13 +225,12 @@ model PageAsset {
 }
 
 model AssignedBook {
-  id             String      @id @default(cuid())
-  employeeId     String
-  publicationId  String
-  completedPages Int         @default(0)
-  status         String      @default("IN_PROGRESS")
-  employee       User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  publication    Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  employeeId    String
+  publicationId String
+  status        String      @default("IN_PROGRESS")
+  employee      User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 

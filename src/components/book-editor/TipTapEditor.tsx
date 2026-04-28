@@ -12,6 +12,7 @@ type Props = {
 
 export default function TipTapEditor({ value, onChange }: Props) {
   const editor = useEditor({
+     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: {

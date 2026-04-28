@@ -177,7 +177,6 @@ CREATE TABLE "AssignedBook" (
     "id" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
     "publicationId" TEXT NOT NULL,
-    "completedPages" INTEGER NOT NULL DEFAULT 0,
     "status" TEXT NOT NULL DEFAULT 'IN_PROGRESS',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -373,7 +372,7 @@ CREATE UNIQUE INDEX "user_statistics_userId_key" ON "user_statistics"("userId");
 CREATE INDEX "LoginActivity_userId_idx" ON "LoginActivity"("userId");
 
 -- AddForeignKey
-ALTER TABLE "MatchmakingQueue" ADD CONSTRAINT "MatchmakingQueue_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MatchmakingQueue" ADD CONSTRAINT "MatchmakingQueue_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -54,8 +54,7 @@ export async function POST(req: Request) {
       await tx.assignedBook.createMany({
         data: bookIds.map((id) => ({
           employeeId,
-          publicationId: id,
-          completedPages: 0,
+          publicationId: id,          
         })),
       })
     })

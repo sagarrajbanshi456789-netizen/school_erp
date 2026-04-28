@@ -67,12 +67,8 @@ function convertJsonToHtml(json: any): string {
 }
 
 function renderPageContent(page: PageData): string {
-  if (page.contentJson) {
-    try {
-      return convertJsonToHtml(page.contentJson)
-    } catch {
-      return "<p>Invalid content</p>"
-    }
+  if (page.contentJson?.html) {
+    return page.contentJson.html
   }
 
   if (page.contentHtml) return page.contentHtml
@@ -153,22 +149,24 @@ export default function PublicationFlipBook({
   })
 
   /* ---------------- ACTIVE PAGE (optimized) ---------------- */
-  const handleScroll = useCallback(() => {
-    const center = window.innerHeight / 2
+const handleScroll = useCallback(() => {
+  const container = contentRef.current
+  if (!container) return
 
-    for (let i = 1; i <= pages.length; i++) {
-      const el = document.getElementById(`page-${i}`)
-      if (!el) continue
+  const center = container.getBoundingClientRect().top + container.clientHeight / 2
 
-      const rect = el.getBoundingClientRect()
+  for (let i = 1; i <= pages.length; i++) {
+    const el = document.getElementById(`page-${i}`)
+    if (!el) continue
 
-      if (rect.top <= center && rect.bottom >= center) {
-        setActivePage(i)
-        break
-      }
+    const rect = el.getBoundingClientRect()
+
+    if (rect.top <= center && rect.bottom >= center) {
+      setActivePage(i)
+      break
     }
-  }, [pages.length])
-
+  }
+}, [pages.length])
   /* ---------------- GO TO PAGE ---------------- */
   const goToPage = (pageNo: number) => {
     const page = Math.max(1, Math.min(pageNo, pages.length))

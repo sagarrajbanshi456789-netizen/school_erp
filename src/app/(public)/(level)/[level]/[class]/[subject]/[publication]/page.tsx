@@ -3,15 +3,6 @@ import { Prisma } from "@prisma/client"
 import { notFound } from "next/navigation"
 import PublicationFlipBook, { PageData } from "./pdfview"
 
-interface PageProps {
-  params: Promise<{
-    level: string
-    class: string
-    subject: string
-    publication: string
-  }>
-}
-
 const publicationArgs = Prisma.validator<Prisma.PublicationDefaultArgs>()({
   include: {
     pages: {
@@ -20,16 +11,29 @@ const publicationArgs = Prisma.validator<Prisma.PublicationDefaultArgs>()({
   },
 })
 
-type PublicationWithPages =
-  Prisma.PublicationGetPayload<typeof publicationArgs>
+type PublicationWithPages = Prisma.PublicationGetPayload<
+  typeof publicationArgs
+>
 
-export default async function PublicationViewer({ params }: PageProps) {
+export default async function PublicationViewer({
+  params,
+}: {
+  params: Promise<{
+    level: string
+    class: string
+    subject: string
+    publication: string
+  }>
+}) {
   const { publication } = await params
 
-  const publicationData = await prisma.publication.findUnique({
-    where: { slug: publication },
-    ...publicationArgs,
-  })
+  console.log("📌 publication slug:", publication)
+
+  const publicationData: PublicationWithPages | null =
+    await prisma.publication.findUnique({
+      where: { slug: publication },
+      ...publicationArgs,
+    })
 
   if (!publicationData) notFound()
 

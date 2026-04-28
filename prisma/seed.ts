@@ -276,27 +276,17 @@ async function main() {
   console.log("✅ Subjects Seeded")
 
   /* --------------------- */
-  /* Seed Publications */
-  /* --------------------- */
-  const allSubjects = await prisma.subject.findMany({
-    include: {
-      class: {
-        include: {
-          level: true,
-        },
-      },
-    },
-  })
+    // Seed Publications & Pages with transaction batching
+  const allSubjects = await prisma.subject.findMany({ include: { class: { include: { level: true } } } })
+  const seedUser = await prisma.user.findUnique({ where: { email: adminEmail } })
+  if (!seedUser) throw new Error("No admin user found for seeding PageProgress")
 
   for (const subject of allSubjects) {
     if (subject.class.isGame) continue
-
     const level = subject.class.level
-
     for (let book = 1; book <= 2; book++) {
       const title = `${subject.name} Book ${book}`
       const slug = slugify(title)
-
       const publication = await prisma.publication.upsert({
         where: { slug },
         update: {},
@@ -309,40 +299,49 @@ async function main() {
           subjectId: subject.id,
         },
       })
+// ======================================
+      // Generate pages and pageProgress in batch
+      const pagesData = []
+      const progressData = []
+      for (let i = 1; i <= 8; i++) {
+        const pageContent = generatePageContent(subject.name, subject.class.name, i)
+        pagesData.push({
+          pageNumber: i,
+          title: `Page ${i}`,
+          contentJson: { html: pageContent.html },
+          contentText: pageContent.text,
+          publicationId: publication.id,
+        })
+      }
 
-for (let i = 1; i <= 20; i++) {
-  const pageContent = generatePageContent(
-    subject.name,
-    subject.class.name,
-    i
-  )
+      const createdPages = await prisma.$transaction(
+        pagesData.map((page) => prisma.publicationPage.upsert({
+          where: { publicationId_pageNumber: { publicationId: page.publicationId, pageNumber: page.pageNumber } },
+          update: {},
+          create: page,
+        }))
+      )
 
-  await prisma.publicationPage.upsert({
-    where: {
-      publicationId_pageNumber: {
-        publicationId: publication.id,
-        pageNumber: i,
-      },
-    },
-    update: {},
-    create: {
-      pageNumber: i,
-      title: `Page ${i}`,
+      for (const page of createdPages) {
+        progressData.push({
+          userId: seedUser.id,
+          pageId: page.id,
+          completed: page.pageNumber <= 5,
+        })
+      }
 
-      contentJson: {
-        html: pageContent.html,
-      },
-
-      contentText: pageContent.text,
-
-      publicationId: publication.id,
-    }
-  })
-}
+      await prisma.$transaction(
+        progressData.map((pp) => prisma.pageProgress.upsert({
+          where: { userId_pageId: { userId: pp.userId, pageId: pp.pageId } },
+          update: { completed: pp.completed },
+          create: pp,
+        }))
+      )
     }
   }
 
-  console.log("📚 Books Created")
+  console.log("📚 Books Created (with Pages & Progress)")
+
 
   /* --------------------- */
   /* Chess Demo Users */

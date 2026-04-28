@@ -1,3 +1,4 @@
+// src/app/employee/dashboard/page.tsx
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -26,7 +27,9 @@ type Book = {
   title: string
   totalPages: number
   completedPages: number
+  slug: string
   publication?: string
+  link?: string
 }
 
 export default function EmployeeDashboard() {
@@ -44,6 +47,7 @@ export default function EmployeeDashboard() {
 
       const res = await fetch('/api/employee/dashboard', {
         cache: 'no-store',
+        credentials: 'include',
       })
 
       if (!res.ok) throw new Error('Failed to load dashboard')
@@ -163,10 +167,13 @@ export default function EmployeeDashboard() {
                       <div className="flex justify-between items-start gap-3">
                         <div>
                           <h3 className="font-semibold">{book.title}</h3>
-                          {book.publication && (
-                            <p className="text-xs text-muted-foreground">
-                              {book.publication}
-                            </p>
+                          {book.publication && book.link && (
+                            <Link
+                              href={book.link}
+                              className="text-xs text-blue-500 hover:underline"
+                            >
+                              View Publication
+                            </Link>
                           )}
                         </div>
 
@@ -195,12 +202,20 @@ export default function EmployeeDashboard() {
                         </Link>
 
                         {/* PAGE VIEW */}
-                        <Link href={`/employee/books/${book.id}/pages`}>
-                          <Button size="sm" variant="secondary">
-                            <Eye className="w-4 h-4 mr-1" />
-                            Pages
-                          </Button>
-                        </Link>
+                        <Link
+  href={{
+    pathname: `/employee/books/${book.id}/pages`,
+    query: {
+      publicationId: book.id, // or real publicationId if available
+      title: book.title,
+    },
+  }}
+>
+  <Button size="sm" variant="secondary">
+    <Eye className="w-4 h-4 mr-1" />
+    Pages
+  </Button>
+</Link>
 
                       </div>
 

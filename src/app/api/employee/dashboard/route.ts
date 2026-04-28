@@ -1,11 +1,10 @@
+// src/app/api/employee/dashboard/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 
 export async function GET(req: Request) {
   try {
-    console.log('================ DASHBOARD API HIT ================')
-
     const session = await auth.api.getSession({
       headers: req.headers,
     })
@@ -16,20 +15,6 @@ export async function GET(req: Request) {
 
     const employeeId = session.user.id
 
-    const userCheck = await prisma.user.findUnique({
-      where: { id: employeeId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-      },
-    })
-
-    if (!userCheck) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     const assignedBooks = await prisma.assignedBook.findMany({
       where: { employeeId },
       include: {
@@ -37,25 +22,45 @@ export async function GET(req: Request) {
           select: {
             id: true,
             title: true,
-            totalPages: true,
+            slug: true,
           },
         },
       },
     })
 
-    const formatted = assignedBooks
-      .map((b) => {
-        if (!b.publication) return null
+    const formatted = await Promise.all(
+      assignedBooks.map(async (b) => {
+        const publicationId = b.publication.id
+
+        // ✅ FAST COUNT: total pages
+        const totalPages = await prisma.publicationPage.count({
+          where: {
+            publicationId,
+          },
+        })
+
+        // ✅ FAST COUNT: completed pages
+        const completedPages = await prisma.pageProgress.count({
+          where: {
+            userId: employeeId,
+            completed: true,
+            page: {
+              publicationId,
+            },
+          },
+        })
 
         return {
-          id: b.publication.id,
+          id: publicationId,
           title: b.publication.title,
+          slug: b.publication.slug,
           publication: b.publication.title,
-          totalPages: b.publication.totalPages || 0,
-          completedPages: b.completedPages || 0,
-        }
+          link: `/primary/class-3/math/${b.publication.slug}`, // construct dynamically
+          totalPages,
+          completedPages,
+}
       })
-      .filter(Boolean)
+    )
 
     return NextResponse.json({
       assignedBooks: formatted,
@@ -70,7 +75,5 @@ export async function GET(req: Request) {
       },
       { status: 500 }
     )
-  } finally {
-    console.log('================ DASHBOARD API END ================')
   }
 }
