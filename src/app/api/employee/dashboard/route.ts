@@ -49,7 +49,9 @@ export async function GET(req: Request) {
             },
           },
         })
-
+        console.log("hi")
+        console.log(`📌 Employee ID: ${employeeId} - Publication: ${b.publication.title} - Total Pages: ${totalPages}, Completed Pages: ${completedPages}`)
+        console.log(`📚 Book: ${b.publication.title} - Total Pages: ${totalPages}, Completed Pages: ${completedPages}`)
         return {
           id: publicationId,
           title: b.publication.title,
@@ -58,7 +60,9 @@ export async function GET(req: Request) {
           link: `/primary/class-3/math/${b.publication.slug}`, // construct dynamically
           totalPages,
           completedPages,
-}
+          employeeId,
+
+        }
       })
     )
 

@@ -3,55 +3,39 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import {
-  BookOpen,
-  CheckCircle,
-  Clock,
-  RefreshCw,
-  TrendingUp,
-  Plus,
-  Pencil,
-  Eye,
-} from 'lucide-react'
-
+import { BookOpen, CheckCircle, Clock, RefreshCw, TrendingUp, Plus, Pencil, Eye, } from 'lucide-react'
 import { useBetterAuth } from '@/lib/useBetterAuth'
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-
 type Book = {
   id: string
   title: string
-  totalPages: number
-  completedPages: number
   slug: string
   publication?: string
   link?: string
+  totalPages: number
+  completedPages: number
+  employeeId?: string
+  publicationId?: string
 }
-
 export default function EmployeeDashboard() {
   const { user } = useBetterAuth()
-
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
   /* ---------------- LOAD ---------------- */
   async function loadDashboard() {
     try {
       setLoading(true)
       setError('')
-
       const res = await fetch('/api/employee/dashboard', {
         cache: 'no-store',
         credentials: 'include',
       })
-
       if (!res.ok) throw new Error('Failed to load dashboard')
-
       const data = await res.json()
 
       setBooks(data.assignedBooks || [])
@@ -203,19 +187,26 @@ export default function EmployeeDashboard() {
 
                         {/* PAGE VIEW */}
                         <Link
-  href={{
-    pathname: `/employee/books/${book.id}/pages`,
-    query: {
-      publicationId: book.id, // or real publicationId if available
-      title: book.title,
-    },
-  }}
->
-  <Button size="sm" variant="secondary">
-    <Eye className="w-4 h-4 mr-1" />
-    Pages
-  </Button>
-</Link>
+                          href={{
+                            pathname: `/employee/books/${book.id}/pages`,
+                            query: {
+                              publicationId: book.publicationId, // or real publicationId if available
+                              title: book.title,
+                              // id: book.id,
+                              // slug: book.slug,
+                              // publication: book.publication,
+                              // link: book.link,
+                              // totalPages: book.totalPages.toString(),
+                              // completedPages: book.completedPages.toString(),
+                              // employeeId: book.employeeId,
+                            },
+                          }}
+                        >
+                          <Button size="sm" variant="secondary">
+                            <Eye className="w-4 h-4 mr-1" />
+                            Pages
+                          </Button>
+                        </Link>
 
                       </div>
 
