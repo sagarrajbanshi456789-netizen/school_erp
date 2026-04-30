@@ -4,31 +4,37 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 
-export async function GET(
-  req: Request,
-  { params }: { params: { bookId: string } }
-) {
+export async function GET(req: Request, context: any) {
   try {
+    console.log('================ PAGES API START ================')
+
+    /* ---------------- PARAMS (FIXED) ---------------- */
+    const { params } = context
+    const { bookId } = await params
+
+    console.log('📚 Book ID:', bookId)
+
+    /* ---------------- QUERY PARAMS (FIXED) ---------------- */
+    const publicationId = new URL(req.url).searchParams.get('publicationId')
+    console.log('📚 Publication ID:', publicationId)
+
     /* ---------------- AUTH ---------------- */
     const session = await auth.api.getSession({
       headers: req.headers,
     })
 
     if (!session?.user?.id) {
+      console.log('❌ Unauthorized access attempt')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const employeeId = session.user.id
-    const { bookId } = params
+    console.log('👤 Employee ID:', employeeId)
 
-    /* ---------------- QUERY PARAMS ---------------- */
-    const { searchParams } = new URL(req.url)
-    const publicationId = searchParams.get('publicationId')
-
-    /* ---------------- VALIDATE BOOK ---------------- */
+    /* ---------------- VALIDATE ASSIGNMENT ---------------- */
     const assignedBook = await prisma.assignedBook.findFirst({
       where: {
-        id: bookId,
+        publicationId: bookId,
         employeeId,
       },
       include: {
@@ -37,41 +43,40 @@ export async function GET(
     })
 
     if (!assignedBook) {
+      console.log('❌ Book not found for employee')
       return NextResponse.json(
         { error: 'Book not found or not assigned' },
         { status: 404 }
       )
     }
 
-    /* ---------------- SECURITY CHECK ---------------- */
-    if (publicationId && publicationId !== assignedBook.publicationId) {
-      return NextResponse.json(
-        { error: 'Invalid publication access' },
-        { status: 403 }
-      )
-    }
+    console.log('📖 Assigned publication:', assignedBook.publicationId)
 
-    /* ---------------- FINAL PUBLICATION ---------------- */
-    const finalPublicationId =
-      publicationId || assignedBook.publicationId
+    /* ---------------- FINAL PUBLICATION ID ---------------- */
+    const finalPublicationId = publicationId || assignedBook.publicationId
 
-    /* ---------------- FETCH PAGES ---------------- */
-   const pages = await prisma.publicationPage.findMany({
-  where: {
-    publicationId: publicationId || assignedBook.publicationId,
-  },
-  orderBy: {
-    pageNumber: 'asc',
-  },
-  select: {
-    id: true,
-    title: true,
-    pageNumber: true,
-    contentHtml: true,
-    contentJson: true, // ✅ ADD THIS BACK
-    thumbnail: true,
-  },
-})
+    console.log('🎯 Final publication ID used:', finalPublicationId)
+
+    /* ---------------- FETCH PAGES (IMPORTANT FIX) ---------------- */
+    const pages = await prisma.publicationPage.findMany({
+      where: {
+        publicationId: finalPublicationId, // ✅ IMPORTANT FIX
+      },
+      orderBy: {
+        pageNumber: 'asc',
+      },
+      select: {
+        id: true,
+        publicationId: true,
+        title: true,
+        pageNumber: true,
+        contentHtml: true,
+        contentJson: true,
+        thumbnail: true,
+      },
+    })
+
+    console.log(`📄 Pages found: ${pages.length}`)
 
     /* ---------------- FETCH PROGRESS ---------------- */
     const progress = await prisma.pageProgress.findMany({
@@ -87,7 +92,6 @@ export async function GET(
       },
     })
 
-    /* ---------------- MERGE PROGRESS ---------------- */
     const progressMap = new Map(
       progress.map((p) => [p.pageId, p.completed])
     )

@@ -30,6 +30,8 @@ export default function BookPages() {
 
     const bookId = params.bookId as string
     const publicationId = searchParams.get('publicationId')
+    console.log('Book ID:', bookId)
+    console.log('Publication ID from search params:', publicationId)
 
     const [pages, setPages] = useState<Page[]>([])
     const [loading, setLoading] = useState(true)
@@ -43,7 +45,7 @@ export default function BookPages() {
                 `/api/employee/books/${bookId}/pages?publicationId=${publicationId}`,
                 { credentials: 'include' }
             )
-
+console.log('Fetching pages with URL:', `/api/employee/books/${bookId}/pages?publicationId=${publicationId}`)
             const data = await res.json()
             setPages(data.pages || [])
         } catch (err) {
@@ -187,7 +189,7 @@ export default function BookPages() {
                             <Link
                                 href={`/employee/books/${bookId}/editor?pageId=${selectedPage.id}`}
                             >
-                                <Button size="sm">
+                                <Button size="sm" className="mr-6">
                                     Edit Page
                                 </Button>
                             </Link>
