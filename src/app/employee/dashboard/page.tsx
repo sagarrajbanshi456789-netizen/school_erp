@@ -1,15 +1,27 @@
 // src/app/employee/dashboard/page.tsx
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import Link from 'next/link'
-import { BookOpen, CheckCircle, Clock, RefreshCw, TrendingUp, Plus, Pencil, Eye, } from 'lucide-react'
+import {
+  BookOpen,
+  CheckCircle,
+  Clock,
+  RefreshCw,
+  TrendingUp,
+  Pencil,
+  Eye,
+} from 'lucide-react'
+
 import { useBetterAuth } from '@/lib/useBetterAuth'
+import { useQuery } from '@tanstack/react-query'
+
+import DashboardSkeleton from '@/components/skeletons/DashboardSkeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+
 type Book = {
   id: string
   title: string
@@ -21,35 +33,36 @@ type Book = {
   employeeId?: string
   publicationId?: string
 }
-export default function EmployeeDashboard() {
-  const { user } = useBetterAuth()
-  const [books, setBooks] = useState<Book[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  /* ---------------- LOAD ---------------- */
-  async function loadDashboard() {
-    try {
-      setLoading(true)
-      setError('')
-      const res = await fetch('/api/employee/dashboard', {
-        cache: 'no-store',
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error('Failed to load dashboard')
-      const data = await res.json()
 
-      setBooks(data.assignedBooks || [])
-    } catch (e) {
-      console.error(e)
-      setError('Unable to load dashboard data.')
-    } finally {
-      setLoading(false)
-    }
+/* ---------------- FETCH FUNCTION ---------------- */
+async function fetchDashboard(): Promise<Book[]> {
+  const res = await fetch('/api/employee/dashboard', {
+    cache: 'no-store',
+    credentials: 'include',
+  })
+
+  if (!res.ok) {
+    throw new Error('Failed to load dashboard')
   }
 
-  useEffect(() => {
-    loadDashboard()
-  }, [])
+  const data = await res.json()
+  return data.assignedBooks || []
+}
+
+export default function EmployeeDashboard() {
+  const { user } = useBetterAuth()
+
+  /* ---------------- REACT QUERY ---------------- */
+  const {
+    data: books = [],
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: ['employee-dashboard'],
+    queryFn: fetchDashboard,
+  })
 
   /* ---------------- STATS ---------------- */
   const stats = useMemo(() => {
@@ -97,8 +110,8 @@ export default function EmployeeDashboard() {
 
       {/* ================= ACTIONS ================= */}
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" onClick={loadDashboard}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
@@ -111,29 +124,26 @@ export default function EmployeeDashboard() {
         </CardHeader>
 
         <CardContent>
+
           {/* LOADING */}
-          {loading && (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-36 rounded-xl" />
-              ))}
-            </div>
-          )}
+          {isLoading && <DashboardSkeleton />}
 
           {/* ERROR */}
-          {!loading && error && (
-            <p className="text-sm text-red-500">{error}</p>
+          {isError && (
+            <p className="text-sm text-red-500">
+              Failed to load dashboard data.
+            </p>
           )}
 
           {/* EMPTY */}
-          {!loading && !error && books.length === 0 && (
+          {!isLoading && !isError && books.length === 0 && (
             <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
               No books assigned yet.
             </div>
           )}
 
           {/* LIST */}
-          {!loading && !error && books.length > 0 && (
+          {!isLoading && !isError && books.length > 0 && (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {books.map((book) => {
                 const progress = book.totalPages
@@ -151,6 +161,7 @@ export default function EmployeeDashboard() {
                       <div className="flex justify-between items-start gap-3">
                         <div>
                           <h3 className="font-semibold">{book.title}</h3>
+
                           {book.publication && book.link && (
                             <Link
                               href={book.link}
@@ -177,7 +188,6 @@ export default function EmployeeDashboard() {
                       {/* ACTIONS */}
                       <div className="flex gap-2 pt-2">
 
-                        {/* OPEN EDITOR */}
                         <Link href={`/employee/books/${book.id}/editor`}>
                           <Button size="sm">
                             <Pencil className="w-4 h-4 mr-1" />
@@ -185,20 +195,12 @@ export default function EmployeeDashboard() {
                           </Button>
                         </Link>
 
-                        {/* PAGE VIEW */}
                         <Link
                           href={{
                             pathname: `/employee/books/${book.id}/pages`,
                             query: {
-                              publicationId: book.publicationId, // or real publicationId if available
+                              publicationId: book.publicationId,
                               title: book.title,
-                              // id: book.id,
-                              // slug: book.slug,
-                              // publication: book.publication,
-                              // link: book.link,
-                              // totalPages: book.totalPages.toString(),
-                              // completedPages: book.completedPages.toString(),
-                              // employeeId: book.employeeId,
                             },
                           }}
                         >
@@ -216,6 +218,7 @@ export default function EmployeeDashboard() {
               })}
             </div>
           )}
+
         </CardContent>
       </Card>
     </div>

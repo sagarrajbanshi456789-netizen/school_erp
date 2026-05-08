@@ -52,13 +52,13 @@ export default function EmployeeSidebar({
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:static z-50 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 h-full transition-all duration-300
+        className={`fixed overflow-hidden md:static z-50 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 h-full transition-all duration-300
         ${open ? "left-0" : "-left-64"} // Slide in/out for mobile
         ${collapsed ? "w-20" : "w-64"}`} // Width based on collapse
       >
 
         {/* Navigation links */}
-        <nav className="p-4">
+        <nav className="p-4 overflow-hidden">
           {navItems.map((item) => {
             const Icon = item.icon // Get icon component
             const active = isActive(item.href, item.exact) // Check if current path matches
@@ -67,14 +67,14 @@ export default function EmployeeSidebar({
               <Link
                 key={item.href} // Unique key
                 href={item.href} // Link URL
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg mb-2 transition
+                className={`overflow-hidden flex items-center gap-3 px-3 py-2 rounded-lg mb-2 transition
                   ${
                     active
                       ? "bg-green-600 text-white" // Active item color
                       : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
               >
-                <Icon size={20} /> {/* Icon */}
+                <Icon className="flex-shrink-0 overflow-hidden" size={20} /> {/* Icon */}
                 {!collapsed && item.name} {/* Show name if not collapsed */}
               </Link>
             )

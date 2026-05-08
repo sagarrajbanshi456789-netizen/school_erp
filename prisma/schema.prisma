@@ -43,6 +43,7 @@ model User {
   banExpires DateTime?
 
   @@map("user")
+  bookPdfs BookPdf[]
 }
 
 model MatchmakingQueue {
@@ -176,6 +177,8 @@ model Publication {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  bookPdfs BookPdf[]
 }
 
 model PublicationPage {
@@ -363,7 +366,23 @@ model UserStatistics {
 
   @@map("user_statistics")
 }
+model BookPdf {
+  id            String   @id @default(cuid())
 
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  fileName      String
+  fileUrl       String
+
+  uploadedById  String?
+  uploadedBy    User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime @default(now())
+
+  @@index([publicationId])
+  @@index([uploadedById])
+}
 model ChessAchievement {
   id          String  @id @default(cuid())
   title       String

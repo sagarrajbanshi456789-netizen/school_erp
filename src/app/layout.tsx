@@ -4,10 +4,9 @@ import "./globals.css"
 
 import AuthProvider from "@/components/providers/AuthProvider"
 import ThemeProvider from "@/components/providers/ThemeProvider"
-
 import { Toaster } from "@/components/ui/sonner"
 import { Suspense } from "react"
-
+import Providers from "@/components/providers/providers"
 export const metadata: Metadata = {
   title: "School ERP",
   description: "School Enterprise Resource Planning System",
@@ -32,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
+        <Providers>
         <ThemeProvider>
           <AuthProvider>
             <Suspense fallback={<LoadingScreen />}>
@@ -44,6 +44,7 @@ export default function RootLayout({
 
           <Toaster />
         </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )
