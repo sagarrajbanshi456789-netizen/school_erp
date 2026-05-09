@@ -1,56 +1,96 @@
+// src/app/(public)/(level)/[level]/[class]/[subject]/[publication]/page.tsx
+
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { notFound } from "next/navigation"
 import PublicationFlipBook, { PageData } from "./pdfview"
 
-const publicationArgs = Prisma.validator<Prisma.PublicationDefaultArgs>()({
-  include: {
-    pages: {
-      orderBy: { pageNumber: "asc" },
+const publicationArgs =
+  Prisma.validator<Prisma.PublicationDefaultArgs>()({
+    include: {
+      pages: {
+        orderBy: {
+          pageNumber: "asc",
+        },
+      },
     },
-  },
-})
+  })
 
 type PublicationWithPages = Prisma.PublicationGetPayload<
   typeof publicationArgs
 >
 
-export default async function PublicationViewer({
-  params,
-}: {
+interface PageProps {
   params: Promise<{
     level: string
     class: string
     subject: string
     publication: string
   }>
-}) {
-  const { publication } = await params
+}
+
+export default async function PublicationViewer({
+  params,
+}: PageProps) {
+  const {
+    level,
+    class: classSlug,
+    subject,
+    publication,
+  } = await params
 
   console.log("📌 publication slug:", publication)
 
   const publicationData: PublicationWithPages | null =
-    await prisma.publication.findUnique({
-      where: { slug: publication },
+    await prisma.publication.findFirst({
+      where: {
+        slug: publication,
+
+        subject: {
+          slug: subject,
+
+          class: {
+            slug: classSlug,
+
+            level: {
+              slug: level,
+            },
+          },
+        },
+      },
+
       ...publicationArgs,
     })
 
-  if (!publicationData) notFound()
+  if (!publicationData) {
+    console.log("❌ Publication not found")
+    notFound()
+  }
 
   const pages: PageData[] = publicationData.pages.map((p) => ({
     id: p.id,
+
     pageNumber: p.pageNumber,
-    contentHtml: p.contentHtml,
-    contentJson: p.contentJson,
-    contentText: p.contentText,
+
+    
+
+    contentText: p.contentText || "",
+
+    imageUrl: p.imageUrl || "",
+
+    hdImageUrl: p.hdImageUrl || "",
+
+    thumbnailUrl: p.thumbnailUrl || "",
   }))
 
   return (
-    <div className="p-6">
-      <PublicationFlipBook
-        title={publicationData.title}
-        pages={pages}
-      />
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-7xl p-4 md:p-6">
+        <PublicationFlipBook
+          title={publicationData.title}
+          pages={pages}
+        />
+      </div>
     </div>
   )
 }

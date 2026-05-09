@@ -1,6 +1,5 @@
-
-// prisma/seed.ts
 /// <reference types="node" />
+
 import "dotenv/config"
 import { PrismaClient } from "@prisma/client"
 import { withAccelerate } from "@prisma/extension-accelerate"
@@ -13,6 +12,7 @@ const prisma = new PrismaClient({
 /* --------------------- */
 /* Utils */
 /* --------------------- */
+
 const slugify = (text: string) =>
   text
     .toLowerCase()
@@ -20,78 +20,35 @@ const slugify = (text: string) =>
     .replace(/[^\w\-]+/g, "")
 
 /* --------------------- */
-/* Generate Demo Page Content */
+/* Dynamic Unsplash Images */
 /* --------------------- */
-function generatePageContent(subject: string, className: string, page: number) {
-  const imageSeed = (page % 8) + 1
 
-  const html = `
-  <div style="font-family: system-ui; line-height:1.7; padding:12px">
+function generatePageImages(
+  subject: string,
+  className: string,
+  page: number
+) {
+  const query = encodeURIComponent(
+    `${subject} education ${className} learning`
+  )
 
-    <h1 style="color:#4f46e5">${subject}</h1>
-    <h2>📘 Chapter ${page} - ${className}</h2>
+  return {
+    imageUrl: `https://source.unsplash.com/1200x1600/?${query}&sig=${page}`,
+    hdImageUrl: `https://source.unsplash.com/2400x3200/?${query}&sig=${page + 50}`,
+    thumbnailUrl: `https://source.unsplash.com/400x600/?${query}&sig=${page + 100}`,
+  }
+}
 
-    <p>
-      This is a <strong>${subject}</strong> lesson designed for <strong>${className}</strong>.
-      It includes structured learning, visuals, and practice.
-    </p>
+/* --------------------- */
+/* Generate Demo Text */
+/* --------------------- */
 
-    <img 
-      src="https://source.unsplash.com/900x450/?${subject},education,learning"
-      style="width:100%; border-radius:12px; margin:15px 0;"
-    />
-
-    <h3>🎯 Learning Objectives</h3>
-    <ul>
-      <li>Understand core ${subject} concepts</li>
-      <li>Develop problem-solving skills</li>
-      <li>Learn through visuals</li>
-      <li>Prepare for exams</li>
-    </ul>
-
-    <h3>📚 Core Concept</h3>
-    <p>
-      ${subject} is an important topic in ${className}.
-      This chapter explains it in a simple and structured way.
-    </p>
-
-    <img 
-      src="https://source.unsplash.com/900x450/?school,study,${imageSeed}"
-      style="width:100%; border-radius:12px; margin:15px 0;"
-    />
-
-    <h3>🧪 Example</h3>
-    <div style="background:#f3f4f6; padding:12px; border-radius:10px;">
-      <strong>Example ${page}:</strong>
-      <p>Practical application of ${subject} with real-world understanding.</p>
-    </div>
-
-    <h3>📌 Key Points</h3>
-    <ol>
-      <li>Core concept of ${subject}</li>
-      <li>Step-by-step understanding</li>
-      <li>Practice improves mastery</li>
-    </ol>
-
-    <img 
-      src="https://source.unsplash.com/900x450/?diagram,education,${page}"
-      style="width:100%; border-radius:12px; margin:15px 0;"
-    />
-
-    <div style="
-      margin-top:15px;
-      padding:15px;
-      border-left:5px solid #22c55e;
-      background:#ecfdf5;
-      border-radius:8px;
-    ">
-      💡 Tip: Practice ${subject} daily for better results.
-    </div>
-
-  </div>
-  `
-
-  const text = `
+function generatePageContent(
+  subject: string,
+  className: string,
+  page: number
+) {
+  return `
 ${subject} - Chapter ${page} (${className})
 
 Topics:
@@ -99,19 +56,23 @@ Topics:
 - Examples
 - Practice questions
 - Key points
-`
 
-  return { html, text }
+This chapter explains ${subject} for ${className}
+with visual learning and practical examples.
+`
 }
+
 /* --------------------- */
 /* Main */
 /* --------------------- */
+
 async function main() {
   console.log("🌱 Seeding database...")
 
   /* --------------------- */
   /* Seed Admin Account */
   /* --------------------- */
+
   const adminEmail = process.env.ADMIN_EMAIL || "admin@school.com"
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123"
 
@@ -130,7 +91,10 @@ async function main() {
 
     await prisma.user.update({
       where: { email: adminEmail },
-      data: { role: "ADMIN", emailVerified: true },
+      data: {
+        role: "ADMIN",
+        emailVerified: true,
+      },
     })
 
     console.log("✅ Admin account created")
@@ -139,6 +103,7 @@ async function main() {
   /* --------------------- */
   /* Levels */
   /* --------------------- */
+
   const levels = [
     "Primary",
     "Lower Secondary",
@@ -163,7 +128,11 @@ async function main() {
     ],
     masters: ["Masters Year 1", "Masters Year 2"],
     gaming: ["Chess", "Ludo", "Carrom", "Bagchal", "Tic Tac Toe"],
-    loksewa: ["Loksewa Level 1", "Loksewa Level 2", "Loksewa Level 3"],
+    loksewa: [
+      "Loksewa Level 1",
+      "Loksewa Level 2",
+      "Loksewa Level 3",
+    ],
   }
 
   const classSubjectsMap: Record<string, string[]> = {
@@ -175,6 +144,7 @@ async function main() {
     "Class 8": ["Math", "Science", "English", "Nepali", "Social"],
     "Class 9": ["Math", "Science", "English", "Nepali", "Social"],
     "Class 10": ["Math", "Science", "English", "Nepali", "Social"],
+
     "Class 11": [
       "Math",
       "Physics",
@@ -183,6 +153,7 @@ async function main() {
       "English",
       "Economics",
     ],
+
     "Class 12": [
       "Math",
       "Physics",
@@ -196,6 +167,7 @@ async function main() {
   /* --------------------- */
   /* Seed Levels */
   /* --------------------- */
+
   for (const levelName of levels) {
     const slug = slugify(levelName)
 
@@ -214,6 +186,7 @@ async function main() {
   /* --------------------- */
   /* Seed Classes */
   /* --------------------- */
+
   for (const [levelSlug, classes] of Object.entries(levelMap)) {
     const level = await prisma.level.findUnique({
       where: { slug: levelSlug },
@@ -229,7 +202,9 @@ async function main() {
             levelId: level.id,
           },
         },
+
         update: {},
+
         create: {
           name: cls,
           slug: slugify(cls),
@@ -245,8 +220,11 @@ async function main() {
   /* --------------------- */
   /* Seed Subjects */
   /* --------------------- */
+
   const allClasses = await prisma.class.findMany({
-    include: { level: true },
+    include: {
+      level: true,
+    },
   })
 
   for (const cls of allClasses) {
@@ -263,7 +241,9 @@ async function main() {
             classId: cls.id,
           },
         },
+
         update: {},
+
         create: {
           name: subject,
           slug: slugify(subject),
@@ -276,72 +256,156 @@ async function main() {
   console.log("✅ Subjects Seeded")
 
   /* --------------------- */
-    // Seed Publications & Pages with transaction batching
-  const allSubjects = await prisma.subject.findMany({ include: { class: { include: { level: true } } } })
-  const seedUser = await prisma.user.findUnique({ where: { email: adminEmail } })
-  if (!seedUser) throw new Error("No admin user found for seeding PageProgress")
+  /* Seed Publications */
+  /* --------------------- */
+
+  const allSubjects = await prisma.subject.findMany({
+    include: {
+      class: {
+        include: {
+          level: true,
+        },
+      },
+    },
+  })
+
+  const seedUser = await prisma.user.findUnique({
+    where: {
+      email: adminEmail,
+    },
+  })
+
+  if (!seedUser) {
+    throw new Error("Admin user not found")
+  }
 
   for (const subject of allSubjects) {
     if (subject.class.isGame) continue
+
     const level = subject.class.level
+
     for (let book = 1; book <= 2; book++) {
       const title = `${subject.name} Book ${book}`
       const slug = slugify(title)
+
       const publication = await prisma.publication.upsert({
         where: { slug },
+
         update: {},
+
         create: {
-          id: `pub-${subject.id}-${slug}`,
           title,
           slug,
-          description: `${subject.name} Book`,
+
+          description: `${subject.name} learning book for ${subject.class.name}`,
+
           href: `/${slugify(level.name)}/${subject.class.slug}/${subject.slug}/${slug}`,
+
+          author: "School ERP",
+
+          coverImage: `https://source.unsplash.com/900x1200/?${encodeURIComponent(
+            `${subject.name} book education`
+          )}`,
+
+          totalPages: 8,
+
           subjectId: subject.id,
         },
       })
-// ======================================
-      // Generate pages and pageProgress in batch
+
+      /* --------------------- */
+      /* Pages */
+      /* --------------------- */
+
       const pagesData = []
-      const progressData = []
+
       for (let i = 1; i <= 8; i++) {
-        const pageContent = generatePageContent(subject.name, subject.class.name, i)
+        const images = generatePageImages(
+          subject.name,
+          subject.class.name,
+          i
+        )
+
+        const contentText = generatePageContent(
+          subject.name,
+          subject.class.name,
+          i
+        )
+
         pagesData.push({
-          pageNumber: i,
-          title: `Page ${i}`,
-          contentJson: { html: pageContent.html },
-          contentText: pageContent.text,
           publicationId: publication.id,
+
+          pageNumber: i,
+
+          title: `Page ${i}`,
+
+          imageUrl: images.imageUrl,
+
+          hdImageUrl: images.hdImageUrl,
+
+          thumbnailUrl: images.thumbnailUrl,
+
+          contentText,
+
+          width: 1200,
+
+          height: 1600,
+
+          backgroundColor: "#ffffff",
+
+          template: "BOOK_PAGE",
+
+          isPublished: true,
         })
       }
 
-      const createdPages = await prisma.$transaction(
-        pagesData.map((page) => prisma.publicationPage.upsert({
-          where: { publicationId_pageNumber: { publicationId: page.publicationId, pageNumber: page.pageNumber } },
-          update: {},
-          create: page,
-        }))
-      )
+      const createdPages = []
+
+for (const page of pagesData) {
+  const createdPage = await prisma.publicationPage.upsert({
+    where: {
+      publicationId_pageNumber: {
+        publicationId: page.publicationId,
+        pageNumber: page.pageNumber,
+      },
+    },
+
+    update: page,
+
+    create: page,
+  })
+
+  createdPages.push(createdPage)
+}
+
+      /* --------------------- */
+      /* Page Progress */
+      /* --------------------- */
 
       for (const page of createdPages) {
-        progressData.push({
-          userId: seedUser.id,
-          pageId: page.id,
-          completed: page.pageNumber <= 5,
-        })
-      }
+  await prisma.pageProgress.upsert({
+    where: {
+      userId_pageId: {
+        userId: seedUser.id,
+        pageId: page.id,
+      },
+    },
 
-      await prisma.$transaction(
-        progressData.map((pp) => prisma.pageProgress.upsert({
-          where: { userId_pageId: { userId: pp.userId, pageId: pp.pageId } },
-          update: { completed: pp.completed },
-          create: pp,
-        }))
-      )
+    update: {
+      completed: page.pageNumber <= 5,
+    },
+
+    create: {
+      userId: seedUser.id,
+      pageId: page.id,
+      completed: page.pageNumber <= 5,
+    },
+  })
+}
     }
   }
 
-  console.log("📚 Books Created (with Pages & Progress)")
-
+  console.log("📚 Books & Pages Seeded")
 
   /* --------------------- */
   /* Chess Demo Users */
@@ -350,14 +414,25 @@ async function main() {
   console.log("♟️ Creating Chess Users...")
 
   const chessUsers = [
-    { email: "player1@chess.com", name: "Player One" },
-    { email: "player2@chess.com", name: "Player Two" },
-    { email: "player3@chess.com", name: "Player Three" },
+    {
+      email: "player1@chess.com",
+      name: "Player One",
+    },
+    {
+      email: "player2@chess.com",
+      name: "Player Two",
+    },
+    {
+      email: "player3@chess.com",
+      name: "Player Three",
+    },
   ]
 
   for (const user of chessUsers) {
     const existing = await prisma.user.findUnique({
-      where: { email: user.email },
+      where: {
+        email: user.email,
+      },
     })
 
     if (!existing) {
@@ -391,7 +466,9 @@ async function main() {
           gameType: "CHESS",
         },
       },
+
       update: {},
+
       create: {
         userId: player.id,
         gameType: "CHESS",
@@ -408,14 +485,22 @@ async function main() {
     await prisma.game.create({
       data: {
         whitePlayerId: players[0].id,
+
         blackPlayerId: players[1].id,
+
         status: "ACTIVE",
+
         gameType: "CHESS",
+
         position:
           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+
         currentTurn: "WHITE",
+
         moveCount: 0,
+
         startedAt: new Date(),
+
         timeControl: "10+0",
       },
     })

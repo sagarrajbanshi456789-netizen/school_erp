@@ -43,7 +43,6 @@ model User {
   banExpires DateTime?
 
   @@map("user")
-  bookPdfs BookPdf[]
 }
 
 model MatchmakingQueue {
@@ -160,71 +159,75 @@ model Subject {
 }
 
 model Publication {
-  id          String  @id @default(cuid())
-  title       String
-  slug        String  @unique
+  id String @id @default(cuid())
+
+  title String
+  slug  String @unique
+
   description String
-  href        String
-  author      String?
-  totalPages  Int     @default(0)
+
+  href String
+
+  author String?
+
+  coverImage String?
+
+  totalPages Int @default(0)
 
   assignedTo AssignedBook[]
 
   subjectId String
-  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  subject Subject @relation(fields: [subjectId], references: [id])
 
   pages PublicationPage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  bookPdfs BookPdf[]
 }
 
 model PublicationPage {
-  id              String         @id @default(cuid())
-  pageNumber      Int
-  title           String?
-  contentHtml     String?        @db.Text
-  contentJson     Json? // MAIN (TipTap source)
-  contentText     String?        @db.Text // search/index
-  pageProgress    PageProgress[]
-  thumbnail       String?
+  id String @id @default(cuid())
+
+  publicationId String
+
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  pageNumber Int
+
+  title String?
+
+  // Main A4 image
+  imageUrl String
+
+  // HD zoom image
+  hdImageUrl String?
+
+  // Grid thumbnail
+  thumbnailUrl String?
+
+  // OCR / searchable text
+  contentText String? @db.Text
+
+  width Int?
+
+  height Int?
+
   backgroundColor String?
-  template        String?
+
+  template String?
 
   isPublished Boolean @default(true)
 
-  publicationId String
-  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-
-  assets PageAsset[]
+  pageProgress PageProgress[]
 
   createdAt DateTime @default(now())
+
   updatedAt DateTime @updatedAt
 
   @@unique([publicationId, pageNumber])
   @@index([publicationId])
-}
-
-model PageAsset {
-  id String @id @default(cuid())
-
-  pageId String
-  page   PublicationPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  type String // IMAGE, AUDIO, PDF, VIDEO
-  url  String
-  alt  String?
-
-  width  Int?
-  height Int?
-
-  sortOrder Int @default(0)
-
-  createdAt DateTime @default(now())
-
-  @@index([pageId])
+  @@index([isPublished])
 }
 
 model AssignedBook {
@@ -366,23 +369,7 @@ model UserStatistics {
 
   @@map("user_statistics")
 }
-model BookPdf {
-  id            String   @id @default(cuid())
 
-  publicationId String
-  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-
-  fileName      String
-  fileUrl       String
-
-  uploadedById  String?
-  uploadedBy    User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
-
-  createdAt     DateTime @default(now())
-
-  @@index([publicationId])
-  @@index([uploadedById])
-}
 model ChessAchievement {
   id          String  @id @default(cuid())
   title       String

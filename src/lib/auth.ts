@@ -137,7 +137,7 @@ session: {
 		admin({
 			defaultRole: "EMPLOYEE",
 			adminRoles: ["ADMIN"],		
-			adminUserIds: ["hz0iI0EslMduecviO2xbHw37Z2DTNdoA"], // Your current user ID
+			adminUserIds: ["qF2tgCI5Z7zgNaNhyncSt6bKuLM6S6Cu"], // Your current user ID
 			// This bypasses role checks for this specific user
 		})
 	],
