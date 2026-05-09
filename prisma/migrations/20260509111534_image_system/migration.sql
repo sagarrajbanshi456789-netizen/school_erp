@@ -130,6 +130,7 @@ CREATE TABLE "Publication" (
     "description" TEXT NOT NULL,
     "href" TEXT NOT NULL,
     "author" TEXT,
+    "coverImage" TEXT,
     "totalPages" INTEGER NOT NULL DEFAULT 0,
     "subjectId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -141,35 +142,25 @@ CREATE TABLE "Publication" (
 -- CreateTable
 CREATE TABLE "PublicationPage" (
     "id" TEXT NOT NULL,
+    "publicationId" TEXT NOT NULL,
     "pageNumber" INTEGER NOT NULL,
     "title" TEXT,
-    "contentHtml" TEXT,
-    "contentJson" JSONB,
+    "imageData" BYTEA NOT NULL,
+    "mimeType" TEXT,
+    "hdImageData" BYTEA,
+    "hdMimeType" TEXT,
+    "thumbnailData" BYTEA,
+    "thumbnailMimeType" TEXT,
     "contentText" TEXT,
-    "thumbnail" TEXT,
+    "width" INTEGER,
+    "height" INTEGER,
     "backgroundColor" TEXT,
     "template" TEXT,
     "isPublished" BOOLEAN NOT NULL DEFAULT true,
-    "publicationId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "PublicationPage_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "PageAsset" (
-    "id" TEXT NOT NULL,
-    "pageId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "url" TEXT NOT NULL,
-    "alt" TEXT,
-    "width" INTEGER,
-    "height" INTEGER,
-    "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "PageAsset_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -321,10 +312,10 @@ CREATE UNIQUE INDEX "Publication_slug_key" ON "Publication"("slug");
 CREATE INDEX "PublicationPage_publicationId_idx" ON "PublicationPage"("publicationId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PublicationPage_publicationId_pageNumber_key" ON "PublicationPage"("publicationId", "pageNumber");
+CREATE INDEX "PublicationPage_isPublished_idx" ON "PublicationPage"("isPublished");
 
 -- CreateIndex
-CREATE INDEX "PageAsset_pageId_idx" ON "PageAsset"("pageId");
+CREATE UNIQUE INDEX "PublicationPage_publicationId_pageNumber_key" ON "PublicationPage"("publicationId", "pageNumber");
 
 -- CreateIndex
 CREATE INDEX "AssignedBook_employeeId_idx" ON "AssignedBook"("employeeId");
@@ -391,9 +382,6 @@ ALTER TABLE "Publication" ADD CONSTRAINT "Publication_subjectId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "PublicationPage" ADD CONSTRAINT "PublicationPage_publicationId_fkey" FOREIGN KEY ("publicationId") REFERENCES "Publication"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "PageAsset" ADD CONSTRAINT "PageAsset_pageId_fkey" FOREIGN KEY ("pageId") REFERENCES "PublicationPage"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "AssignedBook" ADD CONSTRAINT "AssignedBook_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

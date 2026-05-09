@@ -190,44 +190,20 @@ model PublicationPage {
   id String @id @default(cuid())
 
   publicationId String
-
   publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
 
   pageNumber Int
 
-  title String?
-
-  // Main A4 image
-  imageUrl String
-
-  // HD zoom image
-  hdImageUrl String?
-
-  // Grid thumbnail
-  thumbnailUrl String?
-
-  // OCR / searchable text
-  contentText String? @db.Text
-
-  width Int?
-
-  height Int?
-
-  backgroundColor String?
-
-  template String?
-
-  isPublished Boolean @default(true)
-
-  pageProgress PageProgress[]
+  // ONLY IMAGE
+  imageData Bytes
+  mimeType String
 
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 
   @@unique([publicationId, pageNumber])
   @@index([publicationId])
-  @@index([isPublished])
+  pageProgresses PageProgress[]
 }
 
 model AssignedBook {

@@ -23,8 +23,7 @@ export async function GET(
 
     /* ---------------- QUERY PARAMS ---------------- */
 
-    const publicationId =
-      new URL(req.url).searchParams.get("publicationId")
+    const publicationId = new URL(req.url).searchParams.get("publicationId")
 
     console.log("📚 Publication ID:", publicationId)
 
@@ -35,8 +34,6 @@ export async function GET(
     })
 
     if (!session?.user?.id) {
-      console.log("❌ Unauthorized")
-
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -54,86 +51,57 @@ export async function GET(
         publicationId: bookId,
         employeeId,
       },
-
       include: {
         publication: true,
       },
     })
 
     if (!assignedBook) {
-      console.log("❌ Book not assigned")
-
       return NextResponse.json(
-        {
-          error: "Book not found or not assigned",
-        },
+        { error: "Book not found or not assigned" },
         { status: 404 }
       )
     }
 
-    console.log(
-      "📖 Assigned publication:",
-      assignedBook.publicationId
-    )
+    console.log("📖 Assigned publication:", assignedBook.publicationId)
 
     /* ---------------- FINAL PUBLICATION ---------------- */
 
     const finalPublicationId =
       publicationId || assignedBook.publicationId
 
-    console.log(
-      "🎯 Final publication:",
-      finalPublicationId
-    )
+    console.log("🎯 Final publication:", finalPublicationId)
 
-    /* ---------------- FETCH PAGES ---------------- */
+    /* ---------------- FETCH PAGES (FIXED) ---------------- */
 
     const pages = await prisma.publicationPage.findMany({
       where: {
         publicationId: finalPublicationId,
       },
-
       orderBy: {
         pageNumber: "asc",
       },
 
+      // ✅ FIX: include imageData
       select: {
         id: true,
         publicationId: true,
-        title: true,
         pageNumber: true,
-
-        // contentHtml: true,
-        // contentJson: true,
-        contentText: true,
-
-        imageUrl: true,
-        hdImageUrl: true,
-        thumbnailUrl: true,
-
-        width: true,
-        height: true,
-
-        backgroundColor: true,
-        template: true,
-
-        isPublished: true,
+        imageData: true,
       },
     })
 
     console.log(`📄 Pages found: ${pages.length}`)
 
-    /* ---------------- FETCH PROGRESS ---------------- */
+    /* ---------------- PROGRESS ---------------- */
 
     const progress = await prisma.pageProgress.findMany({
       where: {
         userId: employeeId,
-
         page: {
           publicationId: finalPublicationId,
         },
       },
-
       select: {
         pageId: true,
         completed: true,
@@ -144,18 +112,25 @@ export async function GET(
       progress.map((p) => [p.pageId, p.completed])
     )
 
-    /* ---------------- MERGE PROGRESS ---------------- */
+    /* ---------------- FIX IMAGE DATA (IMPORTANT) ---------------- */
 
     const pagesWithProgress = pages.map((page) => ({
-      ...page,
+      id: page.id,
+      publicationId: page.publicationId,
+      pageNumber: page.pageNumber,
+
       completed: progressMap.get(page.id) || false,
+
+      // 🔥 CRITICAL FIX: convert Bytes → base64
+      imageData: page.imageData
+        ? Buffer.from(page.imageData).toString("base64")
+        : null,
     }))
 
     /* ---------------- RESPONSE ---------------- */
 
     return NextResponse.json({
       pages: pagesWithProgress,
-
       publication: assignedBook.publication,
     })
   } catch (err) {
@@ -164,10 +139,7 @@ export async function GET(
     return NextResponse.json(
       {
         error: "Server error",
-        details:
-          err instanceof Error
-            ? err.message
-            : String(err),
+        details: err instanceof Error ? err.message : String(err),
       },
       { status: 500 }
     )

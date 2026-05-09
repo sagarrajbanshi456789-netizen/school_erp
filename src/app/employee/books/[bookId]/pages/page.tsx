@@ -1,10 +1,9 @@
 // src/app/employee/books/[bookId]/pages/page.tsx
 'use client'
 
-import React, {
-  useRef,
-  useState,
-} from 'react'
+import React, { useRef, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   Dialog,
@@ -27,152 +26,176 @@ import {
 
 import ThemeToggle from '@/components/ThemeToggle'
 import PageGridSkeleton from '@/components/skeletons/PageGridSkeleton'
-
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
-import {
-  useParams,
-  useSearchParams,
-} from 'next/navigation'
-
-import { useQuery } from '@tanstack/react-query'
-
 type Page = {
   id: string
-  title: string | null
+  title?: string | null
   pageNumber: number
-
-  imageUrl?: string | null
-
-  contentJson?: {
-    imageUrl?: string
-  }
+  completed?: boolean
+  imageData?: string
 }
 
 export default function BookPages() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
 
   const bookId = params.bookId as string
+  const publicationId = searchParams.get('publicationId')
 
-  const publicationId =
-    searchParams.get('publicationId')
+  const [selectedPage, setSelectedPage] = useState<Page | null>(null)
+  const [uploading, setUploading] = useState(false)
 
-  const [selectedPage, setSelectedPage] =
-    useState<Page | null>(null)
+  const addPagesInputRef = useRef<HTMLInputElement>(null)
 
-  const addPagesInputRef =
-    useRef<HTMLInputElement>(null)
+  /* ---------------- FETCH PAGES ---------------- */
 
-  /* ---------------- REACT QUERY ---------------- */
-
-  const {
-    data,
-    isLoading,
-    isFetching,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['pages', bookId, publicationId],
 
     queryFn: async () => {
       const url = `/api/employee/books/${bookId}/pages${
-        publicationId
-          ? `?publicationId=${publicationId}`
-          : ''
+        publicationId ? `?publicationId=${publicationId}` : ''
       }`
 
       const res = await fetch(url, {
         credentials: 'include',
+        cache: 'no-store',
       })
 
-      if (!res.ok) {
-        throw new Error('Failed to fetch pages')
-      }
+      if (!res.ok) throw new Error('Failed to fetch pages')
 
       return res.json()
     },
 
     enabled: !!bookId,
-
-    staleTime: 1000 * 60 * 5,
-
-    placeholderData: (prev) => prev,
+    staleTime: 0,
   })
 
   const pages: Page[] = data?.pages || []
 
   /* ---------------- REPLACE IMAGE ---------------- */
 
-  const handleReplaceImage = (
+  const handleReplaceImage = async (
     e: React.ChangeEvent<HTMLInputElement>,
     pageId: string
   ) => {
-    const file = e.target.files?.[0]
+    try {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    if (!file) return
+      setUploading(true)
 
-    console.log('Selected Image:', file)
-    console.log('Page ID:', pageId)
+      const formData = new FormData()
+      formData.append('file', file)
 
-    // TODO:
-    // upload replace image API here
+      const res = await fetch(
+        `/api/employee/books/${bookId}/pages/${pageId}/image`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
+
+      if (!res.ok) throw new Error('Upload failed')
+
+      await queryClient.invalidateQueries({
+        queryKey: ['pages', bookId, publicationId],
+      })
+
+      if (selectedPage?.id === pageId) setSelectedPage(null)
+
+      alert('Image updated successfully')
+    } catch (err) {
+      console.error(err)
+      alert('Upload failed')
+    } finally {
+      setUploading(false)
+    }
   }
 
   /* ---------------- ADD PAGES ---------------- */
 
-  const handleAddPages = (
+  const handleAddPages = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const files = e.target.files
+    try {
+      const files = e.target.files
+      if (!files?.length) return
 
-    if (!files || files.length === 0) return
+      setUploading(true)
 
-    console.log('Selected Images:', files)
+      const formData = new FormData()
+      Array.from(files).forEach((file) => {
+        formData.append('files', file)
+      })
 
-    // TODO:
-    // upload add pages API here
+      const res = await fetch(
+        `/api/employee/books/${bookId}/pages/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
+
+      if (!res.ok) throw new Error('Upload failed')
+
+      await queryClient.invalidateQueries({
+        queryKey: ['pages', bookId, publicationId],
+      })
+
+      if (addPagesInputRef.current) {
+        addPagesInputRef.current.value = ''
+      }
+
+      alert('Pages uploaded successfully')
+    } catch (err) {
+      console.error(err)
+      alert('Upload failed')
+    } finally {
+      setUploading(false)
+    }
   }
 
   /* ---------------- DELETE PAGE ---------------- */
 
-  const handleDeletePage = async (
-    pageId: string
-  ) => {
+  const handleDeletePage = async (pageId: string) => {
     try {
       const res = await fetch(
-        `/api/employee/pages/${pageId}`,
+        `/api/employee/books/${bookId}/pages/${pageId}`,
         {
           method: 'DELETE',
         }
       )
 
-      if (!res.ok) {
-        throw new Error('Failed to delete page')
-      }
+      if (!res.ok) throw new Error('Delete failed')
 
-      refetch()
+      await queryClient.invalidateQueries({
+        queryKey: ['pages', bookId, publicationId],
+      })
+
+      if (selectedPage?.id === pageId) setSelectedPage(null)
+
+      alert('Page deleted successfully')
     } catch (err) {
       console.error(err)
       alert('Delete failed')
     }
   }
 
+  /* ---------------- UI ---------------- */
+
   return (
     <div className="p-6 space-y-6">
 
       {/* HEADER */}
-
       <div className="flex items-center justify-between flex-wrap gap-4">
 
         <div className="flex items-center gap-3">
-
           <ThemeToggle />
-
-          <h1 className="text-2xl font-bold">
-            Book Pages
-          </h1>
-
+          <h1 className="text-2xl font-bold">Book Pages</h1>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -181,98 +204,62 @@ export default function BookPages() {
             {pages.length} pages
           </span>
 
-          <>
-            <input
-              ref={addPagesInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              multiple
-              className="hidden"
-              onChange={handleAddPages}
-            />
+          <input
+            ref={addPagesInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            className="hidden"
+            onChange={handleAddPages}
+          />
 
-            <Button
-              type="button"
-              onClick={() =>
-                addPagesInputRef.current?.click()
-              }
-            >
-              Add A4 Images
-            </Button>
-          </>
+          <Button
+            disabled={uploading}
+            onClick={() => addPagesInputRef.current?.click()}
+          >
+            {uploading ? 'Uploading...' : 'Add A4 Images'}
+          </Button>
 
         </div>
-
       </div>
 
       {/* LOADING */}
-
-      {isLoading && (
-        <PageGridSkeleton count={12} />
-      )}
+      {isLoading && <PageGridSkeleton count={12} />}
 
       {/* GRID */}
-
       {!isLoading && pages.length > 0 && (
-
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
 
           {pages.map((page) => {
-
-            const imageUrl =
-              page.contentJson?.imageUrl ||
-              page.imageUrl ||
-              ''
-
-            const replaceInputId =
-              `replace-${page.id}`
+            const replaceInputId = `replace-${page.id}`
 
             return (
-
-              <Card
-                key={page.id}
-                className="overflow-hidden border bg-background/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
-              >
-
-                {/* PREVIEW */}
+              <Card key={page.id} className="overflow-hidden">
 
                 <div
-                  className="flex justify-center bg-muted/40 p-4 cursor-pointer"
-                  onClick={() =>
-                    setSelectedPage(page)
-                  }
+                  className="flex justify-center bg-muted p-4 cursor-pointer"
+                  onClick={() => setSelectedPage(page)}
                 >
-
                   <div
-                    className="bg-white border shadow-md overflow-hidden rounded-sm"
+                    className="bg-white border shadow-md overflow-hidden"
                     style={{
                       width: '140px',
                       aspectRatio: '1 / 1.414',
                     }}
                   >
-
-                    {imageUrl ? (
-
+                    {page.imageData ? (
                       <img
-                        src={imageUrl}
-                        alt={`Page ${page.pageNumber}`}
+                        src={`data:image/png;base64,${page.imageData}`}
                         className="w-full h-full object-cover"
-                        loading="lazy"
+                        alt={`Page ${page.pageNumber}`}
                       />
-
                     ) : (
-
-                      <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
-                        No preview
+                      <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                        Page {page.pageNumber}
                       </div>
-
                     )}
-
                   </div>
-
                 </div>
-
-                {/* CONTENT */}
 
                 <CardContent className="p-3 space-y-2">
 
@@ -280,114 +267,69 @@ export default function BookPages() {
                     Page {page.pageNumber}
                   </p>
 
-                  {page.title && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {page.title}
-                    </p>
-                  )}
+                  <input
+                    id={replaceInputId}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleReplaceImage(e, page.id)
+                    }
+                  />
 
-                  {/* REPLACE IMAGE */}
-
-                  <>
-                    <input
-                      id={replaceInputId}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      onChange={(e) =>
-                        handleReplaceImage(
-                          e,
-                          page.id
-                        )
-                      }
-                    />
-
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      variant="secondary"
-                      type="button"
-                      onClick={() => {
-                        document
-                          .getElementById(
-                            replaceInputId
-                          )
-                          ?.click()
-                      }}
-                    >
-                      Replace Image
-                    </Button>
-                  </>
-
-                  {/* DELETE PAGE */}
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    variant="secondary"
+                    disabled={uploading}
+                    onClick={() =>
+                      document.getElementById(replaceInputId)?.click()
+                    }
+                  >
+                    Replace Image
+                  </Button>
 
                   <AlertDialog>
-
                     <AlertDialogTrigger asChild>
-
                       <Button
+                      style={{ backgroundColor: '#ff4d4f', borderColor: '#ff4d4f' }}
                         size="sm"
                         variant="destructive"
-                        className="w-full"
+                        className="w-full "
                       >
                         Delete Page
                       </Button>
-
                     </AlertDialogTrigger>
 
                     <AlertDialogContent>
-
                       <AlertDialogHeader>
-
                         <AlertDialogTitle>
                           Delete this page?
                         </AlertDialogTitle>
-
                         <AlertDialogDescription>
-                          This action cannot
-                          be undone. The page
-                          and its image will
-                          be permanently
-                          deleted.
+                          This action cannot be undone.
                         </AlertDialogDescription>
-
                       </AlertDialogHeader>
 
                       <AlertDialogFooter>
-
-                        <AlertDialogCancel>
-                          Cancel
-                        </AlertDialogCancel>
-
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() =>
-                            handleDeletePage(
-                              page.id
-                            )
-                          }
+                          onClick={() => handleDeletePage(page.id)}
                         >
                           Delete
                         </AlertDialogAction>
-
                       </AlertDialogFooter>
-
                     </AlertDialogContent>
-
                   </AlertDialog>
 
                 </CardContent>
-
               </Card>
-
             )
           })}
-
         </div>
-
       )}
 
       {/* EMPTY */}
-
       {!isLoading && pages.length === 0 && (
         <div className="text-center text-muted-foreground border rounded-xl p-10">
           No pages found
@@ -395,95 +337,43 @@ export default function BookPages() {
       )}
 
       {/* MODAL */}
+      <Dialog open={!!selectedPage} onOpenChange={() => setSelectedPage(null)}>
+        <DialogContent className="max-w-5xl">
 
-      <Dialog
-        open={!!selectedPage}
-        onOpenChange={() =>
-          setSelectedPage(null)
-        }
-      >
-
-        <DialogContent className="max-w-6xl w-full backdrop-blur-md bg-background/95 border shadow-xl">
-
-          <DialogHeader className="flex flex-row items-center justify-between">
-
+          <DialogHeader>
             <DialogTitle>
-              Page{' '}
-              {selectedPage?.pageNumber}
+              Page {selectedPage?.pageNumber}
             </DialogTitle>
-
-            {selectedPage && (
-              <>
-                <input
-                  id="modal-replace-input"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(e) =>
-                    handleReplaceImage(
-                      e,
-                      selectedPage.id
-                    )
-                  }
-                />
-
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  type="button"
-                  onClick={() => {
-                    document
-                      .getElementById(
-                        'modal-replace-input'
-                      )
-                      ?.click()
-                  }}
-                >
-                  Replace Image
-                </Button>
-              </>
-            )}
-
           </DialogHeader>
 
-          <div className="flex justify-center overflow-auto max-h-[85vh]">
-
+          <div className="flex justify-center">
             <div
-              className="bg-white border shadow-lg"
+              className="bg-white border shadow-lg overflow-hidden"
               style={{
                 width: '100%',
                 maxWidth: '900px',
                 aspectRatio: '1 / 1.414',
               }}
             >
-
-              {selectedPage && (
-
+              {selectedPage?.imageData ? (
                 <img
-                  src={
-                    selectedPage.contentJson
-                      ?.imageUrl ||
-                    selectedPage.imageUrl ||
-                    ''
-                  }
-                  alt={`Page ${selectedPage.pageNumber}`}
+                  src={`data:image/png;base64,${selectedPage.imageData}`}
                   className="w-full h-full object-contain"
+                  alt={`Page ${selectedPage.pageNumber}`}
                 />
-
+              ) : (
+                <span className="text-muted-foreground">
+                  Page Preview
+                </span>
               )}
-
             </div>
-
           </div>
 
         </DialogContent>
-
       </Dialog>
 
-      {/* BACKGROUND LOADER */}
-
-      {isFetching && !isLoading && (
-        <div className="fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full bg-black text-white opacity-70 animate-pulse">
+      {(isFetching || uploading) && !isLoading && (
+        <div className="fixed bottom-4 right-4 text-xs px-3 py-1 rounded-full bg-black text-white opacity-80 animate-pulse z-50">
           Updating...
         </div>
       )}

@@ -1,24 +1,7 @@
-// src/app/(public)/(level)/[level]/[class]/[subject]/[publication]/page.tsx
-
-import { prisma } from "@/lib/prisma"
-import { Prisma } from "@prisma/client"
-import { notFound } from "next/navigation"
 import PublicationFlipBook, { PageData } from "./pdfview"
-
-const publicationArgs =
-  Prisma.validator<Prisma.PublicationDefaultArgs>()({
-    include: {
-      pages: {
-        orderBy: {
-          pageNumber: "asc",
-        },
-      },
-    },
-  })
-
-type PublicationWithPages = Prisma.PublicationGetPayload<
-  typeof publicationArgs
->
+import { prisma } from "@/lib/prisma"
+import { notFound } from "next/navigation"
+import { Prisma } from "@prisma/client"
 
 interface PageProps {
   params: Promise<{
@@ -29,59 +12,59 @@ interface PageProps {
   }>
 }
 
+/* ✅ IMPORTANT: correct Prisma type with pages included */
+const publicationWithPagesArgs =
+  Prisma.validator<Prisma.PublicationDefaultArgs>()({
+    include: {
+      pages: {
+        orderBy: { pageNumber: "asc" },
+        select: {
+          id: true,
+          pageNumber: true,
+          imageData: true,
+        },
+      },
+    },
+  })
+
+type PublicationWithPages =
+  Prisma.PublicationGetPayload<typeof publicationWithPagesArgs>
+
 export default async function PublicationViewer({
   params,
 }: PageProps) {
-  const {
-    level,
-    class: classSlug,
-    subject,
-    publication,
-  } = await params
-
-  console.log("📌 publication slug:", publication)
+  const { level, class: classSlug, subject, publication } =
+    await params
 
   const publicationData: PublicationWithPages | null =
     await prisma.publication.findFirst({
       where: {
         slug: publication,
-
         subject: {
           slug: subject,
-
           class: {
             slug: classSlug,
-
             level: {
               slug: level,
             },
           },
         },
       },
-
-      ...publicationArgs,
+      include: publicationWithPagesArgs.include,
     })
 
   if (!publicationData) {
-    console.log("❌ Publication not found")
     notFound()
   }
 
   const pages: PageData[] = publicationData.pages.map((p) => ({
-    id: p.id,
+  id: p.id,
+  pageNumber: p.pageNumber,
 
-    pageNumber: p.pageNumber,
-
-    
-
-    contentText: p.contentText || "",
-
-    imageUrl: p.imageUrl || "",
-
-    hdImageUrl: p.hdImageUrl || "",
-
-    thumbnailUrl: p.thumbnailUrl || "",
-  }))
+  imageData: p.imageData
+    ? Buffer.from(p.imageData).toString("base64")
+    : null,
+}))
 
   return (
     <div className="min-h-screen bg-background text-foreground">
