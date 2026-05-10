@@ -1,10 +1,11 @@
+// src/app/admin/dashboard/layout.tsx
 'use client'
 
 import { useState } from 'react'
 import ProgressBar from '@/components/dashboard/ProgressBar'
 import Sidebar from '@/components/dashboard/Sidebar'
 import Header from '@/components/dashboard/Header'
-import useAdminSocket from '@/lib/useAdminSocket'
+import { useAdminSocket } from '@/lib/useAdminSocket'
 import { useBetterAuth } from '@/lib/useBetterAuth'
 
 export default function AdminLayout({
@@ -14,8 +15,8 @@ export default function AdminLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
-  const { connected, unread } = useAdminSocket()
   const { user, loading, logout } = useBetterAuth()
+  const { connected, unread } = useAdminSocket(user?.id || "")
 
   /* Loading Screen */
   if (loading)

@@ -1,8 +1,14 @@
+// src/components/chat/ChatList.tsx
 'use client'
+
+import { useEffect, useState } from 'react'
+import { useBetterAuth } from '@/lib/useBetterAuth'
 
 interface User {
   id: string
   name: string
+  email?: string
+  role: 'ADMIN' | 'EMPLOYEE' | 'CUSTOMER'
   online?: boolean
   lastMessage?: string
   time?: string
@@ -14,65 +20,64 @@ interface Props {
   selectedUserId?: string
 }
 
-export default function ChatList({
-  onSelect,
-  selectedUserId,
-}: Props) {
+export default function ChatList({ onSelect, selectedUserId }: Props) {
+  const { user } = useBetterAuth()
 
-  // 🔥 Later replace with API/socket data
-  const users: User[] = [
-    {
-      id: '1',
-      name: 'Ramesh',
-      online: true,
-      lastMessage: 'Wants to topup account',
-      time: '2m',
-      unread: 2,
-    },
-    {
-      id: '2',
-      name: 'Sita',
-      online: false,
-      lastMessage: 'Payment done',
-      time: '10m',
-      unread: 0,
-    },
-    {
-      id: '3',
-      name: 'Amit',
-      online: true,
-      lastMessage: 'Hello admin',
-      time: '1h',
-      unread: 5,
-    },
-  ]
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true)
+
+        const res = await fetch('/api/chat/users')
+        const data = await res.json()
+
+        setUsers(data.users || [])
+      } catch (err) {
+        console.error('Failed to load chat users', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUsers()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        Loading users...
+      </div>
+    )
+  }
 
   return (
     <div className="divide-y">
-
-      {users.map((user) => {
-        const isActive = selectedUserId === user.id
+      {users.map((userItem) => {
+        const isActive = selectedUserId === userItem.id
 
         return (
           <div
-            key={user.id}
-            onClick={() => onSelect(user)}
-            className={`flex items-center gap-3 p-4 cursor-pointer transition
-            ${
-              isActive
-                ? 'bg-blue-100 dark:bg-blue-900'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-            }`}
+            key={userItem.id}
+            onClick={() => onSelect(userItem)}
+            className={`
+              flex items-center gap-3 p-4 cursor-pointer transition
+              ${
+                isActive
+                  ? 'bg-primary/10'
+                  : 'hover:bg-muted/40'
+              }
+            `}
           >
-
             {/* Avatar */}
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                {user.name[0]}
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                {userItem.name?.[0] || '?'}
               </div>
 
-              {/* 🟢 Online Dot */}
-              {user.online && (
+              {userItem.online && (
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
               )}
             </div>
@@ -80,32 +85,29 @@ export default function ChatList({
             {/* Info */}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">
-                {user.name}
+                {userItem.name}
               </p>
 
               <p className="text-xs text-muted-foreground truncate">
-                {user.lastMessage}
+                {userItem.lastMessage || 'No messages yet'}
               </p>
             </div>
 
-            {/* Right side */}
+            {/* Right */}
             <div className="flex flex-col items-end gap-1">
               <span className="text-xs text-muted-foreground">
-                {user.time}
+                {userItem.time || ''}
               </span>
 
-              {/* 🔴 Unread badge */}
-              {user.unread && user.unread > 0 && (
+              {userItem.unread ? (
                 <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {user.unread > 99 ? '99+' : user.unread}
+                  {userItem.unread > 99 ? '99+' : userItem.unread}
                 </span>
-              )}
+              ) : null}
             </div>
-
           </div>
         )
       })}
-
     </div>
   )
 }

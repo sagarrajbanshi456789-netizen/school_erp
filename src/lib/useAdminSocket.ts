@@ -1,39 +1,55 @@
-// src/lib/useAdminSocket.ts
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { useEffect, useState } from "react"
+import { connectSocket } from "./socket"
 
-interface AdminSocket {
-  connected: boolean
-  unread: number
-}
-
-let socket: Socket | null = null
-
-export default function useAdminSocket(): AdminSocket {
+export const useAdminSocket = (adminId: string) => {
+  const [socket, setSocket] = useState<any>(null)
   const [connected, setConnected] = useState(false)
   const [unread, setUnread] = useState(0)
+  const [lastMessage, setLastMessage] = useState<any>(null)
 
   useEffect(() => {
-    if (!socket) {
-      socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || '', { transports: ['websocket'] })
-    }
+    if (!adminId) return
+
+    const s = connectSocket(adminId)
+    setSocket(s)
+
+    s.emit("join_user", { userId: adminId })
 
     const onConnect = () => setConnected(true)
     const onDisconnect = () => setConnected(false)
-    const onUnread = (count: number) => setUnread(count)
 
-    socket.on('connect', onConnect)
-    socket.on('disconnect', onDisconnect)
-    socket.on('admin:unread', onUnread)
+    const onNewMessage = (msg: any) => {
+      setLastMessage(msg)
+      setUnread((prev) => prev + 1)
+    }
+
+    const onNotification = (msg: any) => {
+      setLastMessage(msg)
+      setUnread((prev) => prev + 1)
+    }
+
+    s.on("connect", onConnect)
+    s.on("disconnect", onDisconnect)
+    s.on("message_notification", onNotification)
+    s.on("new_message", onNewMessage)
 
     return () => {
-      socket?.off('connect', onConnect)
-      socket?.off('disconnect', onDisconnect)
-      socket?.off('admin:unread', onUnread)
+      s.off("connect", onConnect)
+      s.off("disconnect", onDisconnect)
+      s.off("message_notification", onNotification)
+      s.off("new_message", onNewMessage)
     }
-  }, [])
+  }, [adminId])
 
-  return { connected, unread }
+  const resetUnread = () => setUnread(0)
+
+  return {
+    socket,
+    connected,
+    unread,
+    lastMessage,
+    resetUnread,
+  }
 }

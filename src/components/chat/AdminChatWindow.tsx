@@ -1,3 +1,4 @@
+// src/components/chat/AdminChatWindow.tsx
 'use client'
 
 import { useEffect, useRef, useState } from "react"
@@ -31,39 +32,54 @@ export default function AdminChatWindow({ user, adminId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [typing, setTyping] = useState(false)
 
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
-  // ✅ Auto scroll
+  /* ---------------- AUTO SCROLL ---------------- */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, typing])
 
-  // ✅ Reset chat when switching user
+  /* ---------------- RESET CHAT ON USER CHANGE ---------------- */
   useEffect(() => {
     setMessages([])
+    setTyping(false)
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
   }, [user.id])
 
-  // Receive messages
+  /* ---------------- SOCKET EVENTS ---------------- */
   useEffect(() => {
     if (!socket) return
 
     const handleReceiveMessage = (msg: Message) => {
-      if (msg.senderId !== user.id) return
+      // only messages from current chat
+      const isRelevant =
+        msg.senderId === user.id || msg.receiverId === user.id
 
-      // جلوگیری duplicate
+      if (!isRelevant) return
+
       setMessages(prev => {
-        if (prev.find(m => m.id === msg.id)) return prev
+        const exists = prev.some(m => m.id === msg.id)
+        if (exists) return prev
         return [...prev, msg]
       })
     }
 
     const handleTyping = (from: string) => {
-      if (from === user.id) {
-        setTyping(true)
+      if (from !== user.id) return
 
-        // auto stop typing after 2s
-        setTimeout(() => setTyping(false), 2000)
+      setTyping(true)
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
       }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        setTyping(false)
+      }, 1500)
     }
 
     const handleStopTyping = (from: string) => {
@@ -79,19 +95,18 @@ export default function AdminChatWindow({ user, adminId }: Props) {
       socket.off("typing", handleTyping)
       socket.off("stop-typing", handleStopTyping)
     }
-
   }, [socket, user.id])
 
-  // Send message
+  /* ---------------- SEND MESSAGE ---------------- */
   const sendMessage = (payload: { text: string }) => {
     if (!socket || !payload.text.trim()) return
 
     const msg: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       text: payload.text,
       senderId: adminId,
       receiverId: user.id,
-      seen: false
+      seen: false,
     }
 
     socket.emit("send-message", msg)
@@ -99,21 +114,27 @@ export default function AdminChatWindow({ user, adminId }: Props) {
     setMessages(prev => [...prev, msg])
   }
 
-  // Send reaction
+  /* ---------------- REACTIONS ---------------- */
   const reactToMessage = (emoji: string, messageId: string) => {
     if (!socket) return
-    socket.emit("reaction", { emoji, messageId })
+
+    socket.emit("reaction", {
+      emoji,
+      messageId,
+      userId: adminId,
+    })
   }
 
+  /* ---------------- UI ---------------- */
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
 
-      {/* Header */}
-      <div className="p-3 border-b font-semibold bg-white dark:bg-gray-900">
-        Chat with {user.name}
+      {/* HEADER */}
+      <div className="p-3 border-b font-semibold">
+        Chat with {user.name || "User"}
       </div>
 
-      {/* Messages */}
+      {/* MESSAGES */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
 
         {messages.map(msg => (
@@ -123,7 +144,7 @@ export default function AdminChatWindow({ user, adminId }: Props) {
                 text: msg.text || "",
                 from: msg.senderId,
                 to: msg.receiverId,
-                role: msg.senderId === adminId ? "admin" : "user"
+                role: msg.senderId === adminId ? "admin" : "user",
               }}
               isOwn={msg.senderId === adminId}
             />
@@ -136,23 +157,24 @@ export default function AdminChatWindow({ user, adminId }: Props) {
           </div>
         ))}
 
-        {/* Typing indicator */}
+        {/* TYPING INDICATOR */}
         {typing && (
-          <div className="text-sm text-gray-400 px-2">
-            {user.name} is typing...
+          <div className="text-sm text-muted-foreground px-2 animate-pulse">
+            {user.name || "User"} is typing...
           </div>
         )}
 
-        {/* Auto-scroll anchor */}
+        {/* SCROLL ANCHOR */}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* INPUT */}
       <ChatInput
         from={adminId}
         to={user.id}
         onSend={sendMessage}
       />
+
     </div>
   )
 }

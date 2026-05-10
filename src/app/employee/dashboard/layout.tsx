@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployeeNavbar from '@/components/employee/EmployeeNavbar'
-import EmployeeSupportWidget from '@/components/support/EmployeeSupportWidget'
+import ChatWidget from '@/components/chat/ChatWidget'
 
 export default function EmployeeLayout({
   children,
@@ -16,7 +16,7 @@ export default function EmployeeLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden transition-colors">
-      
+
       {/* Sidebar */}
       <div
         className={`
@@ -40,7 +40,7 @@ export default function EmployeeLayout({
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        
+
         <EmployeeNavbar
           toggleSidebar={() => setSidebarOpen(prev => !prev)}
           toggleCollapse={() => setCollapsed(prev => !prev)}
@@ -52,8 +52,8 @@ export default function EmployeeLayout({
 
       </div>
 
-      {/* Support Widget */}
-      <EmployeeSupportWidget className="fixed bottom-4 right-4 z-50" />
+      {/* 💬 GLOBAL CHAT WIDGET (EMPLOYEE MODE) */}
+      <ChatWidget mode="EMPLOYEE" />
 
     </div>
   )

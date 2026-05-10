@@ -43,6 +43,8 @@ model User {
   banExpires DateTime?
 
   @@map("user")
+  messages Message[]
+  conversationParticipants ConversationParticipant[]
 }
 
 model MatchmakingQueue {
@@ -400,4 +402,56 @@ enum GameType {
   TICTACTOE
   LUDO
   BAGCHAL
+}
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages      Message[]
+}
+
+model ConversationParticipant {
+  id             String @id @default(cuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role ChatRole
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  content  String?
+
+  // FILE SUPPORT
+  fileUrl  String?
+  fileType String?
+
+  createdAt DateTime @default(now())
+
+  // STATUS SYSTEM
+  sentAt     DateTime @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  @@index([conversationId])
+}
+
+enum ChatRole {
+  ADMIN
+  EMPLOYEE
+  CUSTOMER
 }

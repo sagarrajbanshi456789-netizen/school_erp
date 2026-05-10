@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest) {
 
     // ✅ Check for duplicate mobile
     const existingUser = await prisma.user.findFirst({
-      where: { mobile: normalizedMobile },
+      // where: { mobile: normalizedMobile },
     })
 
     if (existingUser && existingUser.id !== user.id) {
@@ -36,12 +36,12 @@ export async function PUT(req: NextRequest) {
     }
 
     // ✅ Update mobile
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: { mobile: normalizedMobile },
-    })
+    // const updatedUser = await prisma.user.update({
+      // where: { id: user.id },
+      // data: { mobile: normalizedMobile },
+    // })
 
-    return NextResponse.json({ success: true, user: updatedUser })
+    // return NextResponse.json({ success: true, user: updatedUser })
 
   } catch (err) {
     console.error("UPDATE MOBILE ERROR:", err)
