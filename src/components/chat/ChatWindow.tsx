@@ -1,3 +1,4 @@
+// src/components/chat/ChatWindow.tsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -44,7 +45,32 @@ export default function ChatWindow({
   }, [conversationId])
 
   // =====================
-  // SOCKET LISTENER
+  // JOIN CONVERSATION ROOM (IMPORTANT FIX)
+  // =====================
+  useEffect(() => {
+  if (!socket || !conversationId) return
+
+  const handleJoin = () => {
+    socket.emit("join_conversation", {
+      conversationId,
+    })
+  }
+
+  // join immediately if already connected
+  if (socket.connected) {
+    handleJoin()
+  }
+
+  // ALSO join after reconnect (VERY IMPORTANT)
+  socket.on("connect", handleJoin)
+
+  return () => {
+    socket.off("connect", handleJoin)
+  }
+}, [socket, conversationId])
+
+  // =====================
+  // SOCKET LISTENER (FIXED)
   // =====================
   useEffect(() => {
     if (!socket) return
@@ -59,18 +85,19 @@ export default function ChatWindow({
       })
     }
 
-    socket.on("receive-message", handleMessage)
+    // ✅ FIXED EVENT NAME
+    socket.on("new_message", handleMessage)
 
     return () => {
-      socket.off("receive-message", handleMessage)
+      socket.off("new_message", handleMessage)
     }
   }, [socket, conversationId])
 
   // =====================
-  // SEND MESSAGE
+  // SEND MESSAGE (FIXED)
   // =====================
   const sendMessage = async () => {
-    if (!text.trim()) return
+    if (!text.trim() || !socket) return
 
     const message: Message = {
       conversationId,
@@ -78,10 +105,10 @@ export default function ChatWindow({
       content: text,
     }
 
-    // 1. SOCKET
-    socket?.emit("send-message", message)
+    // 1. SOCKET EMIT (FIXED EVENT NAME)
+    socket.emit("send_message", message)
 
-    // 2. DATABASE
+    // 2. DATABASE SAVE
     const res = await fetch("/api/chat/send", {
       method: "POST",
       headers: {
@@ -92,7 +119,7 @@ export default function ChatWindow({
 
     const saved = await res.json()
 
-    // 3. update UI with DB response (IMPORTANT FIX)
+    // 3. UPDATE UI FROM DB RESPONSE
     setMessages((prev) => [...prev, saved])
 
     setText("")

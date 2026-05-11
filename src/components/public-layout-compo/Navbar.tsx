@@ -17,6 +17,7 @@ import {
   LogOut,
   LogIn,
   UserPlus,
+  Download,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { authClient } from "@/lib/auth-client"
@@ -68,7 +69,41 @@ export function Navbar() {
   }
 
   const user = session?.user
+const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+const [installable, setInstallable] = useState(false)
 
+useEffect(() => {
+  const handler = (e: any) => {
+    e.preventDefault()
+    setDeferredPrompt(e)
+    setInstallable(true)
+  }
+
+  window.addEventListener("beforeinstallprompt", handler)
+
+  return () =>
+    window.removeEventListener(
+      "beforeinstallprompt",
+      handler
+    )
+}, [])
+
+const handleInstall = async () => {
+  if (!deferredPrompt) {
+    alert("Install option not available yet.")
+    return
+  }
+
+  deferredPrompt.prompt()
+
+  const { outcome } =
+    await deferredPrompt.userChoice
+
+  if (outcome === "accepted") {
+    setDeferredPrompt(null)
+    setInstallable(false)
+  }
+}
   return (
     <nav className="w-full border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -94,7 +129,34 @@ export function Navbar() {
                   <Home size={16} /> Home
                 </Button>
               </Link>
+{installable && (
+  <Button
+    className="
+      flex items-center gap-2
 
+      bg-gradient-to-r
+      from-[#ffe4c4]
+      via-[#f5d2a0]
+      to-[#e6b980]
+
+      text-black
+      border-0
+
+      hover:scale-105
+      transition-all
+      duration-300
+
+      dark:from-[#3b2d20]
+      dark:via-[#2a2119]
+      dark:to-[#1a1410]
+      dark:text-white
+    "
+    onClick={handleInstall}
+  >
+    <Download size={16} />
+    Install App
+  </Button>
+)}
               {/* Theme Toggle */}
               <ThemeToggle />
 
@@ -194,6 +256,34 @@ export function Navbar() {
                   <MobileItem href="/" active={isActive("/")} onClick={closeMenu}>
                     <Home size={16} /> Home
                   </MobileItem>
+         {installable && (
+  <Button
+    className="
+      w-full
+      flex items-center gap-2
+
+      bg-gradient-to-r
+      from-[#ffe4c4]
+      via-[#f5d2a0]
+      to-[#e6b980]
+
+      text-black
+      border-0
+
+      dark:from-[#3b2d20]
+      dark:via-[#2a2119]
+      dark:to-[#1a1410]
+      dark:text-white
+    "
+    onClick={() => {
+      handleInstall()
+      closeMenu()
+    }}
+  >
+    <Download size={16} />
+    Install App
+  </Button>
+)}
                   <MobileItem href="/profile" active={isActive("/profile")} onClick={closeMenu}>
                     <User size={16} /> Profile
                   </MobileItem>

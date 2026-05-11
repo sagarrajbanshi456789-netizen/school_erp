@@ -3,8 +3,9 @@ import { Server } from "socket.io"
 export function initSocket(server: any) {
   const io = new Server(server, {
     cors: {
-      origin: "*", // in production restrict this
+      origin: "*",
     },
+    transports: ["websocket"], // 🔥 IMPORTANT FIX
   })
 
   io.on("connection", (socket) => {
@@ -14,40 +15,43 @@ export function initSocket(server: any) {
     // JOIN USER ROOM
     // =========================
     socket.on("join_user", ({ userId }) => {
+      if (!userId) return
       socket.join(userId)
+      console.log("Joined user room:", userId)
     })
 
     // =========================
     // JOIN CONVERSATION ROOM
     // =========================
     socket.on("join_conversation", ({ conversationId }) => {
+      if (!conversationId) return
       socket.join(conversationId)
+      console.log("Joined conversation:", conversationId)
     })
 
     // =========================
-    // SEND MESSAGE
+    // SEND MESSAGE (FIXED)
     // =========================
     socket.on("send_message", (data) => {
-      /*
-        data = {
-          conversationId,
-          senderId,
-          receiverId,
-          content
-        }
-      */
+      if (!data?.conversationId) return
 
-      // send to conversation room
+      console.log("Message sent:", data)
+
+      // 1. broadcast to conversation
       io.to(data.conversationId).emit("new_message", data)
 
-      // notify receiver directly
-      io.to(data.receiverId).emit("message_notification", data)
+      // 2. also notify receiver (optional UI badge)
+      if (data.receiverId) {
+        io.to(data.receiverId).emit("message_notification", data)
+      }
     })
 
     // =========================
     // READ RECEIPT
     // =========================
     socket.on("mark_read", ({ conversationId, userId }) => {
+      if (!conversationId) return
+
       io.to(conversationId).emit("message_read", {
         conversationId,
         userId,
@@ -55,7 +59,7 @@ export function initSocket(server: any) {
     })
 
     // =========================
-    // TYPING INDICATOR
+    // TYPING
     // =========================
     socket.on("typing", ({ conversationId, userId }) => {
       socket.to(conversationId).emit("typing", { userId })

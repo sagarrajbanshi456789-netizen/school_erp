@@ -427,29 +427,43 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
+
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   senderId String
-  sender   User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
-  content  String?
+  content String? @db.Text
 
-  // FILE SUPPORT
   fileUrl  String?
   fileType String?
+  fileName String?
+  fileSize BigInt?
 
-  createdAt DateTime @default(now())
+  type MessageType @default(TEXT)
 
-  // STATUS SYSTEM
-  sentAt     DateTime @default(now())
   deliveredAt DateTime?
   readAt      DateTime?
 
-  @@index([conversationId])
-}
+  editedAt DateTime?
+  deletedAt DateTime?
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([conversationId, createdAt])
+}
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
 enum ChatRole {
   ADMIN
   EMPLOYEE

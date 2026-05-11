@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { connectSocket } from "./socket"
 
 export const useChatSocket = (userId: string) => {
@@ -13,7 +13,13 @@ export const useChatSocket = (userId: string) => {
     const s = connectSocket(userId)
     setSocket(s)
 
-    const onConnect = () => setConnected(true)
+    const onConnect = () => {
+      setConnected(true)
+
+      // ✅ IMPORTANT: join user room for notifications
+      s.emit("join_user", { userId })
+    }
+
     const onDisconnect = () => setConnected(false)
 
     s.on("connect", onConnect)
@@ -22,13 +28,23 @@ export const useChatSocket = (userId: string) => {
     return () => {
       s.off("connect", onConnect)
       s.off("disconnect", onDisconnect)
+      s.disconnect()
     }
   }, [userId])
 
-  // join conversation helper
-  const joinConversation = (conversationId: string) => {
-    socket?.emit("join_conversation", { conversationId })
-  }
+  // =========================
+  // JOIN CONVERSATION (FIXED SAFE VERSION)
+  // =========================
+  const joinConversation = useCallback(
+    (conversationId: string) => {
+      if (!socket || !conversationId) return
+
+      socket.emit("join_conversation", {
+        conversationId,
+      })
+    },
+    [socket]
+  )
 
   return {
     socket,

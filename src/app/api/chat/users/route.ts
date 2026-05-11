@@ -1,5 +1,3 @@
-// src/app/api/chat/users/route.ts
-
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
@@ -11,7 +9,6 @@ export async function GET() {
           not: "ADMIN",
         },
       },
-
       select: {
         id: true,
         name: true,
@@ -21,14 +18,12 @@ export async function GET() {
         isOnline: true,
         lastSeen: true,
       },
-
       orderBy: {
         lastSeen: "desc",
       },
     })
 
-    return NextResponse.json(users)
-
+    return NextResponse.json({ users }) // ✅ FIXED
   } catch (error) {
     console.error("CHAT_USERS_ERROR:", error)
 

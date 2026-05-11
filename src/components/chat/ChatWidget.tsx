@@ -2,79 +2,333 @@
 "use client"
 
 import { useState } from "react"
-import { MessageCircle, X } from "lucide-react"
+import {
+    MessageCircle,
+    X,
+    SendHorizonal,
+    Sparkles,
+} from "lucide-react"
+
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { useBetterAuth } from "@/lib/useBetterAuth"
+import { color } from "framer-motion"
 
 type Props = {
-  mode?: "PUBLIC" | "EMPLOYEE"
+    mode?: "PUBLIC" | "EMPLOYEE"
 }
 
 export default function ChatWidget({ mode }: Props) {
-  const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false)
+    const [message, setMessage] = useState("")
 
-  const { user } = useBetterAuth()
+    const { user } = useBetterAuth()
 
-  const role = mode ?? user?.role ?? "PUBLIC"
+    const role = mode ?? user?.role ?? "PUBLIC"
 
-  // 🚨 Block admin from using this widget
-  if (role === "ADMIN") return null
+    // 🚨 hide for admin
+    if (role === "ADMIN") return null
 
-  return (
-    <>
-      {/* FLOAT BUTTON */}
-      <button
-        onClick={() => setOpen(true)}
-        className="
-          fixed bottom-6 right-6 z-50
-          h-14 w-14 rounded-full
-          bg-primary text-white
-          shadow-xl flex items-center justify-center
-          hover:scale-105 transition
+    const demoMessages = [
+        {
+            id: 1,
+            sender: "admin",
+            text: "Hi 👋 Welcome to support.",
+        },
+        {
+            id: 2,
+            sender: "admin",
+            text: "How can we help you today?",
+        },
+    ]
+    const customerQuickMessages = [
+        "Hi 👋",
+        "Tell me about your company",
+        "How can I read all books?",
+        "I need help with my account",
+        "How can I access premium content?",
+    ]
+
+    const employeeQuickMessages = [
+        "Hi admin 👋",
+        "I completed today's work",
+        "I need publication support",
+        "Please check my task",
+    ]
+
+    const quickMessages =
+        role === "EMPLOYEE"
+            ? employeeQuickMessages
+            : customerQuickMessages
+    return (
+        <>
+            {/* FLOATING BUTTON */}
+            <div className="fixed bottom-6 right-6 z-50">
+                <Button
+                    onClick={() => setOpen((prev) => !prev)}
+                    size="icon"
+                    className={cn(
+                        "h-14 w-14 rounded-full shadow-2xl border transition-all duration-300 hover:scale-110      hover:shadow-[0_10px_40px_rgba(0,0,0,0.25)] text - black dark:text-white bg-gradient-to-br from-[#ffe4c4] via-[#f5d2a0] to-[#e6b980] dark:from-[#3b2d20] dark:via-[#2a2119] dark:to-[#1a1410] backdrop-blur-md", open && "rotate-90"
+                    )}
+                >
+                    {open ? (
+                        <X className="h-5 w-5" />
+                    ) : (
+                        <MessageCircle className="h-6 w-6" />
+                    )}
+                </Button>
+
+                {/* ONLINE PULSE */}
+                {!open && (
+                    <span className="absolute top-0 right-0 flex h-4 w-4">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
+                    </span>
+                )}
+            </div >
+
+            {/* CHAT WINDOW */}
+            {
+                open && (
+                    <div
+                        className="
+      fixed bottom-24 right-6 z-50
+      w-[95vw] sm:w-[380px]
+      h-[80vh] sm:h-[620px]
+
+      rounded-[28px]
+      overflow-hidden
+      border
+
+      bg-white
+      dark:bg-black
+
+      border-black/10
+      dark:border-white/10
+
+      shadow-[0_12px_60px_rgba(0,0,0,0.18)]
+
+      flex flex-col
+
+      animate-in
+      slide-in-from-bottom-4
+      fade-in
+      duration-300
+    "
+                    >
+                        {/* HEADER */}
+                        <div
+                            className="
+        h-16
+        px-4
+        border-b
+        border-black/10
+        dark:border-white/10
+
+        flex items-center justify-between
+
+        bg-white
+        dark:bg-black
+      "
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <Avatar className="h-11 w-11">
+                                        <AvatarFallback
+                                            className="
+                bg-black
+                text-white
+                dark:bg-white
+                dark:text-black
+                font-bold
+              "
+                                        >
+                                            A
+                                        </AvatarFallback>
+                                    </Avatar>
+
+                                    {/* ONLINE DOT */}
+                                    <span
+                                        className="
+              absolute bottom-0 right-0
+              h-3.5 w-3.5
+              rounded-full
+              bg-green-500
+              border-2
+              border-white
+              dark:border-black
+            "
+                                    />
+                                </div>
+
+                                <div>
+                                    <h2 className="text-sm font-semibold">
+                                        Admin Support
+                                    </h2>
+
+                                    <p
+                                        className="
+              text-xs
+              text-neutral-500
+              dark:text-neutral-400
+            "
+                                    >
+                                        Active now
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setOpen(false)}
+                                className="
+          rounded-full
+          hover:bg-black/5
+          dark:hover:bg-white/10
         "
-      >
-        <MessageCircle className="h-6 w-6" />
-      </button>
+                            >
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
 
-      {/* CHAT WINDOW */}
-      {open && (
-        <div className="
-          fixed bottom-6 right-6 z-50
-          w-[380px] h-[540px]
-          bg-background border
-          rounded-2xl shadow-2xl
-          flex flex-col overflow-hidden
-        ">
+                        {/* CHAT BODY */}
+                        <ScrollArea className="flex-1 px-4 py-5">
+                            <div className="space-y-4">
+                                {demoMessages.map((msg) => (
+                                    <div
+                                        key={msg.id}
+                                        className={cn(
+                                            "flex",
+                                            msg.sender === "admin"
+                                                ? "justify-start"
+                                                : "justify-end"
+                                        )}
+                                    >
+                                        <div
+                                            className={cn(
+                                                " max-w-[80%] px-4 py-3 text-sm rounded-3xl leading-relaxed",
+                                                msg.sender === "admin"
+                                                    ? `
+                    bg-neutral-100
+                    text-black
+                    dark:bg-neutral-900
+                    dark:text-white
+                  `
+                                                    : `
+                    bg-black
+                    text-white
+                    dark:bg-white
+                    dark:text-black
+                  `
+                                            )}
+                                        >
+                                            {msg.text}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
 
-          {/* HEADER */}
-          <div className="flex items-center justify-between p-3 border-b bg-muted/40">
-            <div className="font-semibold text-sm">
-              Support Chat
-            </div>
+                        {/* QUICK REPLIES */}
+                        <div className="px-3 pb-2">
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                                {quickMessages.map((msg, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setMessage(msg)}
+                                        className="
+              whitespace-nowrap
+              rounded-full
+              border
 
-            <button onClick={() => setOpen(false)}>
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+              border-black/10
+              dark:border-white/10
 
-          {/* CHAT BODY */}
-          <div className="flex-1 overflow-y-auto p-3 text-sm">
-            <p className="text-muted-foreground">
-              Hi 👋 Chat with admin support anytime.
-            </p>
-          </div>
+            
+              dark:bg-neutral-900
+dark:text-black
+              px-4 py-2
+              text-xs
+              font-medium
 
-          {/* INPUT */}
-          <div className="p-3 border-t flex gap-2">
-            <input
-              placeholder="Type message..."
-              className="flex-1 h-9 px-3 border rounded-md text-sm"
-            />
-            <Button size="sm">Send</Button>
-          </div>
+              hover:scale-[1.02]
+              transition
+            "
 
-        </div>
-      )}
-    </>
-  )
+                                    >
+                                        {msg}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* INPUT AREA */}
+                        <div
+                            className="
+        p-3
+        border-t
+
+        border-black/10
+        dark:border-white/10
+
+        bg-white
+        dark:bg-black
+      "
+                        >
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    value={message}
+                                    onChange={(e) =>
+                                        setMessage(e.target.value)
+                                    }
+                                    placeholder="Aa"
+                                    className="
+            h-12
+            rounded-full
+            border-0
+
+            bg-neutral-100
+              text-black
+            placeholder:text-neutral-500
+            dark:bg-neutral-900
+
+            px-5
+
+            focus-visible:ring-0
+            focus-visible:outline-none
+          "
+                                />
+
+                                <Button
+                                    size="icon"
+                                    className="
+            h-12 w-12
+            rounded-full
+
+            bg-black
+            text-white
+
+            hover:bg-neutral-800
+
+            dark:bg-white
+            dark:text-black
+            dark:hover:bg-neutral-200
+
+            shrink-0
+          "
+                                >
+                                    <SendHorizonal className="h-5 w-5" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </>
+    )
 }

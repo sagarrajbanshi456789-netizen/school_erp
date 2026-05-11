@@ -10,6 +10,7 @@ import Providers from "@/components/providers/providers"
 export const metadata: Metadata = {
   title: "School ERP",
   description: "School Enterprise Resource Planning System",
+    manifest: "/manifest.json",
 }
 
 function LoadingScreen() {

@@ -13,8 +13,10 @@ export default async function PublicationLayout({
     publication: string
   }
 }) {
+      // ✅ unwrap params first
+  const { publication: publicationSlug } = await params
   const publication = await prisma.publication.findFirst({
-    where: { slug: params.publication },
+    where: { slug: publicationSlug },
     select: {
       title: true,
     },
