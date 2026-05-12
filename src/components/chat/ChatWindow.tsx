@@ -28,21 +28,7 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState("")
 
-  // =====================
-  // LOAD HISTORY
-  // =====================
-  useEffect(() => {
-    const fetchMessages = async () => {
-      const res = await fetch(
-        `/api/chat/history?conversationId=${conversationId}`
-      )
 
-      const data = await res.json()
-      setMessages(data.messages || [])
-    }
-
-    fetchMessages()
-  }, [conversationId])
 
   // =====================
   // JOIN CONVERSATION ROOM (IMPORTANT FIX)

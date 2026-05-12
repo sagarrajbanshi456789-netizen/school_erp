@@ -17,13 +17,58 @@ export async function GET() {
         role: true,
         isOnline: true,
         lastSeen: true,
+
+        // ✅ CORRECT RELATION PATH
+        conversationParticipants: {
+          select: {
+            conversation: {
+              select: {
+                id: true,
+
+                messages: {
+                  orderBy: {
+                    createdAt: "desc",
+                  },
+                  take: 1,
+                  select: {
+                    content: true,
+                    createdAt: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: {
         lastSeen: "desc",
       },
     })
 
-    return NextResponse.json({ users }) // ✅ FIXED
+    const formattedUsers = users.map((u) => {
+      const conversation =
+        u.conversationParticipants?.[0]?.conversation
+
+      const lastMsg = conversation?.messages?.[0]
+
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        online: u.isOnline,
+
+        lastMessage: lastMsg?.content || null,
+
+        time: lastMsg?.createdAt
+          ? new Date(lastMsg.createdAt).toLocaleTimeString()
+          : null,
+
+        unread: 0,
+      }
+    })
+
+    return NextResponse.json({ users: formattedUsers })
   } catch (error) {
     console.error("CHAT_USERS_ERROR:", error)
 

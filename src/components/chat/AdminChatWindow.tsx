@@ -1,19 +1,24 @@
 // src/components/chat/AdminChatWindow.tsx
 'use client'
 
-import { useEffect, useRef, useState } from "react"
-import ChatInput from "./ChatInput"
-import MessageBubble from "./MessageBubble"
-import ReactionBar from "./ReactionBar"
-import { useChatSocket } from "@/hooks/useChatSocket"
+import { useEffect, useRef, useState } from 'react'
+
+import ChatInput from './ChatInput'
+import MessageBubble from './MessageBubble'
+import ReactionBar from './ReactionBar'
+
+import {
+  connectSocket,
+  getSocket,
+} from '@/lib/socket'
 
 interface Message {
   id: string
-  text?: string
-  image?: string
+  content?: string
   senderId: string
-  receiverId: string
-  seen: boolean
+  conversationId: string
+  createdAt?: string
+  status?: 'sending' | 'sent'
 }
 
 interface User {
@@ -24,147 +29,372 @@ interface User {
 interface Props {
   user: User
   adminId: string
+  conversationId: string
 }
 
-export default function AdminChatWindow({ user, adminId }: Props) {
-  const { socket } = useChatSocket(adminId)
+export default function AdminChatWindow({
+  user,
+  adminId,
+  conversationId,
+}: Props) {
+  const [messages, setMessages] = useState<
+    Message[]
+  >([])
 
-  const [messages, setMessages] = useState<Message[]>([])
-  const [typing, setTyping] = useState(false)
+  const [typing, setTyping] =
+    useState(false)
 
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const [loading, setLoading] =
+    useState(true)
 
-  /* ---------------- AUTO SCROLL ---------------- */
+  const messagesEndRef =
+    useRef<HTMLDivElement | null>(null)
+
+  const typingTimeoutRef =
+    useRef<NodeJS.Timeout | null>(null)
+
+  // =========================
+  // SOCKET
+  // =========================
+  const socket = getSocket()
+
+  // =========================
+  // CONNECT SOCKET
+  // =========================
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, typing])
+    if (!adminId) return
 
-  /* ---------------- RESET CHAT ON USER CHANGE ---------------- */
-  useEffect(() => {
-    setMessages([])
-    setTyping(false)
+    connectSocket(adminId)
+  }, [adminId])
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
+  // =========================
+  // LOAD HISTORY
+  // =========================
+// =========================
+// LOAD HISTORY
+// =========================
+useEffect(() => {
+  const loadMessages = async () => {
+    if (!conversationId) {
+      console.log(
+        '❌ No conversationId'
+      )
+      return
     }
-  }, [user.id])
 
-  /* ---------------- SOCKET EVENTS ---------------- */
+    try {
+      console.log(
+        '\n🟢 LOADING MESSAGES...'
+      )
+
+      console.log(
+        'Conversation ID:',
+        conversationId
+      )
+
+      setLoading(true)
+
+      const res = await fetch(
+        `/api/chat/message/${conversationId}`
+      )
+
+      console.log(
+        'Response status:',
+        res.status
+      )
+
+      if (!res.ok) {
+        throw new Error(
+          'Failed to load messages'
+        )
+      }
+
+      const data = await res.json()
+
+      console.log(
+        'LOAD_MESSAGES_RESPONSE:',
+        data
+      )
+
+      console.log(
+        'TOTAL_MESSAGES:',
+        data.messages?.length
+      )
+
+      setMessages(data.messages || [])
+
+    } catch (error) {
+      console.error(
+        'LOAD_MESSAGES_ERROR:',
+        error
+      )
+    } finally {
+      setLoading(false)
+
+      console.log(
+        '🟢 MESSAGE LOADING FINISHED'
+      )
+    }
+  }
+
+  loadMessages()
+}, [conversationId])
+  // =========================
+  // JOIN CONVERSATION
+  // =========================
   useEffect(() => {
-    if (!socket) return
+    if (!socket || !conversationId) return
 
-    const handleReceiveMessage = (msg: Message) => {
-      // only messages from current chat
-      const isRelevant =
-        msg.senderId === user.id || msg.receiverId === user.id
+    socket.emit('join_conversation', {
+      conversationId,
+    })
 
-      if (!isRelevant) return
+    // =========================
+    // NEW MESSAGE
+    // =========================
+    const handleNewMessage = (
+      msg: Message
+    ) => {
+      if (
+        msg.conversationId !==
+        conversationId
+      ) {
+        return
+      }
 
       setMessages(prev => {
-        const exists = prev.some(m => m.id === msg.id)
-        if (exists) return prev
-        return [...prev, msg]
-      })
+
+  const exists = prev.some(
+    m => m.id === msg.id
+  )
+
+  if (exists) {
+    console.log(
+      '⚠️ Duplicate message skipped:',
+      msg.id
+    )
+
+    return prev
+  }
+
+  console.log(
+    '✅ NEW MESSAGE RECEIVED:',
+    msg
+  )
+
+  return [
+    ...prev,
+    {
+      ...msg,
+      status: 'sent',
+    },
+  ]
+})
     }
 
-    const handleTyping = (from: string) => {
-      if (from !== user.id) return
+    // =========================
+    // TYPING
+    // =========================
+    const handleTyping = (
+      data: { userId: string }
+    ) => {
+      if (data.userId !== user.id)
+        return
 
       setTyping(true)
 
       if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
+        clearTimeout(
+          typingTimeoutRef.current
+        )
       }
 
-      typingTimeoutRef.current = setTimeout(() => {
-        setTyping(false)
-      }, 1500)
+      typingTimeoutRef.current =
+        setTimeout(() => {
+          setTyping(false)
+        }, 1500)
     }
 
-    const handleStopTyping = (from: string) => {
-      if (from === user.id) setTyping(false)
+    const handleStopTyping = () => {
+      setTyping(false)
     }
 
-    socket.on("receive-message", handleReceiveMessage)
-    socket.on("typing", handleTyping)
-    socket.on("stop-typing", handleStopTyping)
+    // =========================
+    // SOCKET EVENTS
+    // =========================
+    socket.on(
+      'new_message',
+      handleNewMessage
+    )
 
+    socket.on('typing', handleTyping)
+
+    socket.on(
+      'stop_typing',
+      handleStopTyping
+    )
+
+    // =========================
+    // CLEANUP
+    // =========================
     return () => {
-      socket.off("receive-message", handleReceiveMessage)
-      socket.off("typing", handleTyping)
-      socket.off("stop-typing", handleStopTyping)
+      socket.off(
+        'new_message',
+        handleNewMessage
+      )
+
+      socket.off(
+        'typing',
+        handleTyping
+      )
+
+      socket.off(
+        'stop_typing',
+        handleStopTyping
+      )
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(
+          typingTimeoutRef.current
+        )
+      }
     }
-  }, [socket, user.id])
+  }, [
+    socket,
+    conversationId,
+    user.id,
+  ])
 
-  /* ---------------- SEND MESSAGE ---------------- */
-  const sendMessage = (payload: { text: string }) => {
-    if (!socket || !payload.text.trim()) return
+  // =========================
+  // AUTO SCROLL
+  // =========================
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth',
+    })
+  }, [messages, typing])
 
-    const msg: Message = {
-      id: crypto.randomUUID(),
-      text: payload.text,
-      senderId: adminId,
-      receiverId: user.id,
-      seen: false,
-    }
+  // =========================
+  // SEND MESSAGE
+  // =========================
+  // =========================
+// SEND MESSAGE
+// =========================
+const sendMessage = (
+  payload: { text: string }
+) => {
 
-    socket.emit("send-message", msg)
+  if (!payload.text.trim()) return
 
-    setMessages(prev => [...prev, msg])
-  }
+  console.log(
+    '\n🟢 SENDING MESSAGE'
+  )
 
-  /* ---------------- REACTIONS ---------------- */
-  const reactToMessage = (emoji: string, messageId: string) => {
-    if (!socket) return
+  console.log({
+    conversationId,
+    senderId: adminId,
+    content: payload.text,
+    receiverId: user.id,
+  })
 
-    socket.emit("reaction", {
+  // send via socket only
+  socket.emit('send_message', {
+    conversationId,
+    senderId: adminId,
+    content: payload.text,
+    receiverId: user.id,
+  })
+}
+
+  // =========================
+  // REACTIONS
+  // =========================
+  const reactToMessage = (
+    emoji: string,
+    messageId: string
+  ) => {
+    socket.emit('reaction', {
       emoji,
       messageId,
       userId: adminId,
+      conversationId,
     })
   }
 
-  /* ---------------- UI ---------------- */
+  // =========================
+  // UI
+  // =========================
   return (
-    <div className="flex flex-col h-full bg-background">
-
+    <div className="flex h-full flex-col bg-background">
       {/* HEADER */}
-      <div className="p-3 border-b font-semibold">
-        Chat with {user.name || "User"}
+      <div className="border-b p-3 font-semibold">
+        Chat with{' '}
+        {user.name || 'User'}
       </div>
 
       {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 space-y-4 overflow-y-auto p-3">
+        {/* LOADING */}
+        {loading && (
+          <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+            Loading messages...
+          </div>
+        )}
 
+        {/* EMPTY */}
+        {!loading &&
+          messages.length === 0 && (
+            <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+              No messages yet
+            </div>
+          )}
+
+        {/* CHAT */}
         {messages.map(msg => (
-          <div key={msg.id}>
+          <div
+            key={msg.id}
+            className="space-y-1"
+          >
             <MessageBubble
               msg={{
-                text: msg.text || "",
+                text:
+                  msg.content || '',
                 from: msg.senderId,
-                to: msg.receiverId,
-                role: msg.senderId === adminId ? "admin" : "user",
+                to: user.id,
+                role:
+                  msg.senderId ===
+                  adminId
+                    ? 'admin'
+                    : 'user',
+                status: msg.status,
               }}
-              isOwn={msg.senderId === adminId}
+              isOwn={
+                msg.senderId === adminId
+              }
             />
 
             <ReactionBar
-              onReact={(emoji: string) =>
-                reactToMessage(emoji, msg.id)
+              onReact={(
+                emoji: string
+              ) =>
+                reactToMessage(
+                  emoji,
+                  msg.id
+                )
               }
             />
           </div>
         ))}
 
-        {/* TYPING INDICATOR */}
+        {/* TYPING */}
         {typing && (
-          <div className="text-sm text-muted-foreground px-2 animate-pulse">
-            {user.name || "User"} is typing...
+          <div className="animate-pulse px-2 text-sm text-muted-foreground">
+            {user.name || 'User'} is
+            typing...
           </div>
         )}
 
-        {/* SCROLL ANCHOR */}
+        {/* SCROLL */}
         <div ref={messagesEndRef} />
       </div>
 
@@ -174,7 +404,6 @@ export default function AdminChatWindow({ user, adminId }: Props) {
         to={user.id}
         onSend={sendMessage}
       />
-
     </div>
   )
 }

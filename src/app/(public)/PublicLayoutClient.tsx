@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { Navbar } from "@/components/public-layout-compo/Navbar"
 import Footer from "@/components/public-layout-compo/Footer"
 import { Toaster } from "@/components/ui/sonner"
-import PublicChatWidget from "@/components/chat/ChatWidget"
+import ChatWidget from "@/components/chat/ChatWidget"
 export default function PublicLayoutClient({
   children,
 }: {
@@ -24,7 +24,7 @@ export default function PublicLayoutClient({
 
       {!hideLayout && <Footer />}
   {/* 💬 CUSTOMER CHAT ONLY */}
-      {!hideLayout && <PublicChatWidget mode="PUBLIC" />}
+      {!hideLayout && <ChatWidget mode="PUBLIC" />}
       <Toaster richColors position="top-right" />
     </>
   )

@@ -1,28 +1,33 @@
 // src/components/chat/ChatWidget.tsx
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
     MessageCircle,
     X,
-    SendHorizonal,
-    Sparkles,
+    SendHorizontal,
+    
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useBetterAuth } from "@/lib/useBetterAuth"
-import { color } from "framer-motion"
 
 type Props = {
     mode?: "PUBLIC" | "EMPLOYEE"
 }
-
+type ChatMessage = {
+  id: number
+  sender: "admin" | "user"
+  text: string
+  status?: "sending" | "sent"
+}
 export default function ChatWidget({ mode }: Props) {
+    const [isSending, setIsSending] = useState(false)
+    const bottomRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
     const [message, setMessage] = useState("")
 
@@ -33,18 +38,18 @@ export default function ChatWidget({ mode }: Props) {
     // 🚨 hide for admin
     if (role === "ADMIN") return null
 
-    const demoMessages = [
-        {
-            id: 1,
-            sender: "admin",
-            text: "Hi 👋 Welcome to support.",
-        },
-        {
-            id: 2,
-            sender: "admin",
-            text: "How can we help you today?",
-        },
-    ]
+    const [messages, setMessages] = useState<ChatMessage[]>([
+  {
+    id: 1,
+    sender: "admin",
+    text: "Hi 👋 Welcome to support.",
+  },
+  {
+    id: 2,
+    sender: "admin",
+    text: "How can we help you today?",
+  },
+])
     const customerQuickMessages = [
         "Hi 👋",
         "Tell me about your company",
@@ -64,6 +69,49 @@ export default function ChatWidget({ mode }: Props) {
         role === "EMPLOYEE"
             ? employeeQuickMessages
             : customerQuickMessages
+
+
+
+       function sendMessage() {
+  if (!message.trim() || isSending) return
+
+  const tempId = Date.now()
+
+  const newMessage: ChatMessage = {
+    id: tempId,
+    sender: "user",
+    text: message.trim(),
+    status: "sending",
+  }
+
+  // 1. instantly show message (optimistic UI)
+  setMessages((prev) => [...prev, newMessage])
+
+  setMessage("")
+  setIsSending(true)
+
+  // 2. simulate network delay (Messenger feel)
+  setTimeout(() => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === tempId
+          ? { ...msg, status: "sent" }
+          : msg
+      )
+    )
+
+    setIsSending(false)
+  }, 700)
+}
+
+
+
+
+useEffect(() => {
+  bottomRef.current?.scrollIntoView({
+    behavior: "smooth",
+  })
+}, [messages])
     return (
         <>
             {/* FLOATING BUTTON */}
@@ -199,7 +247,7 @@ export default function ChatWidget({ mode }: Props) {
                         {/* CHAT BODY */}
                         <ScrollArea className="flex-1 px-4 py-5">
                             <div className="space-y-4">
-                                {demoMessages.map((msg) => (
+                                {messages.map((msg) => (
                                     <div
                                         key={msg.id}
                                         className={cn(
@@ -209,28 +257,30 @@ export default function ChatWidget({ mode }: Props) {
                                                 : "justify-end"
                                         )}
                                     >
-                                        <div
-                                            className={cn(
-                                                " max-w-[80%] px-4 py-3 text-sm rounded-3xl leading-relaxed",
-                                                msg.sender === "admin"
-                                                    ? `
-                    bg-neutral-100
-                    text-black
-                    dark:bg-neutral-900
-                    dark:text-white
-                  `
-                                                    : `
-                    bg-black
-                    text-white
-                    dark:bg-white
-                    dark:text-black
-                  `
-                                            )}
-                                        >
+                                      <div
+  className={cn(
+    "max-w-[80%] px-4 py-3 text-sm rounded-3xl leading-relaxed transition-all duration-300 animate-in fade-in slide-in-from-bottom-2",
+    msg.sender === "admin"
+      ? "bg-neutral-100 text-black dark:bg-neutral-900 dark:text-white"
+      : "bg-black text-white dark:bg-white dark:text-black"
+  )}
+>
                                             {msg.text}
+  {msg.sender === "user" && (
+  <div className="text-[10px] mt-1 opacity-60">
+    {msg.status === "sending" && (
+      <span className="animate-pulse">Sending...</span>
+    )}
+
+    {msg.status === "sent" && (
+      <span className="text-green-500">Sent ✓</span>
+    )}
+  </div>
+)}
                                         </div>
                                     </div>
                                 ))}
+                                <div ref={bottomRef} />
                             </div>
                         </ScrollArea>
 
@@ -240,7 +290,29 @@ export default function ChatWidget({ mode }: Props) {
                                 {quickMessages.map((msg, index) => (
                                     <button
                                         key={index}
-                                        onClick={() => setMessage(msg)}
+  onClick={() => {
+  const tempId = Date.now()
+
+  setMessages((prev) => [
+    ...prev,
+    {
+      id: tempId,
+      sender: "user",
+      text: msg,
+      status: "sending",
+    },
+  ])
+
+  setTimeout(() => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === tempId
+          ? { ...m, status: "sent" }
+          : m
+      )
+    )
+  }, 700)
+}}
                                         className="
               whitespace-nowrap
               rounded-full
@@ -286,6 +358,12 @@ dark:text-black
                                     onChange={(e) =>
                                         setMessage(e.target.value)
                                     }
+                                     onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      sendMessage()
+    }
+  }}
                                     placeholder="Aa"
                                     className="
             h-12
@@ -306,6 +384,7 @@ dark:text-black
 
                                 <Button
                                     size="icon"
+                                      onClick={sendMessage}
                                     className="
             h-12 w-12
             rounded-full
@@ -322,7 +401,7 @@ dark:text-black
             shrink-0
           "
                                 >
-                                    <SendHorizonal className="h-5 w-5" />
+                                    <SendHorizontal className="h-5 w-5" />
                                 </Button>
                             </div>
                         </div>

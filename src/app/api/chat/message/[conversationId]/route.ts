@@ -5,10 +5,27 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(
   req: NextRequest,
-  context: any
+  context: {
+    params: Promise<{
+      conversationId: string
+    }>
+  }
 ) {
   try {
-    const { conversationId } = await context.params
+    console.log(
+      "\n🟢 GET_MESSAGES_ROUTE START"
+    )
+
+    // ✅ IMPORTANT FIX
+    const params = await context.params
+
+    const conversationId =
+      params?.conversationId
+
+    console.log(
+      "Conversation ID:",
+      conversationId
+    )
 
     if (!conversationId) {
       return NextResponse.json(
@@ -17,31 +34,62 @@ export async function GET(
       )
     }
 
-    const messages = await prisma.message.findMany({
-      where: {
-        conversationId,
-      },
+    const { searchParams } =
+      new URL(req.url)
 
-      orderBy: {
-        createdAt: "asc",
-      },
+    const limitParam =
+      searchParams.get("limit")
 
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            role: true,
-            image: true,
+    const limit = limitParam
+      ? Number(limitParam)
+      : 50
+
+    console.log("Limit:", limit)
+
+    if (Number.isNaN(limit)) {
+      return NextResponse.json(
+        { error: "Invalid limit value" },
+        { status: 400 }
+      )
+    }
+
+    console.log(
+      "Fetching messages from DB..."
+    )
+
+    const messages =
+      await prisma.message.findMany({
+        where: { conversationId },
+        orderBy: {
+          createdAt: "asc",
+        },
+        take: limit,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              image: true,
+            },
           },
         },
-      },
+      })
+
+    console.log(
+      `✅ Messages found: ${messages.length}`
+    )
+
+    return NextResponse.json({
+      conversationId,
+      messages,
     })
 
-    return NextResponse.json(messages)
-
   } catch (error) {
-    console.error("GET_MESSAGES_ERROR:", error)
+    console.error(
+      "🔴 GET_MESSAGES_ERROR:",
+      error
+    )
 
     return NextResponse.json(
       { error: "Failed to fetch messages" },

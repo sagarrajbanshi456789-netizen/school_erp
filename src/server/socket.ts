@@ -1,11 +1,13 @@
+// src/server/socket.ts
 import { Server } from "socket.io"
+import { prisma } from "@/lib/prisma"
 
 export function initSocket(server: any) {
   const io = new Server(server, {
     cors: {
       origin: "*",
     },
-    transports: ["websocket"], // 🔥 IMPORTANT FIX
+    transports: ["websocket", "polling"],
   })
 
   io.on("connection", (socket) => {
@@ -17,7 +19,6 @@ export function initSocket(server: any) {
     socket.on("join_user", ({ userId }) => {
       if (!userId) return
       socket.join(userId)
-      console.log("Joined user room:", userId)
     })
 
     // =========================
@@ -26,23 +27,46 @@ export function initSocket(server: any) {
     socket.on("join_conversation", ({ conversationId }) => {
       if (!conversationId) return
       socket.join(conversationId)
-      console.log("Joined conversation:", conversationId)
     })
 
     // =========================
-    // SEND MESSAGE (FIXED)
+    // SEND MESSAGE (CLEAN + SAFE)
     // =========================
-    socket.on("send_message", (data) => {
-      if (!data?.conversationId) return
+    socket.on("send_message", async (data) => {
+      try {
+        if (!data?.conversationId || !data?.senderId || !data?.content) {
+          return
+        }
 
-      console.log("Message sent:", data)
+        // 1. SAVE TO DB
+        const message = await prisma.message.create({
+          data: {
+            conversationId: data.conversationId,
+            senderId: data.senderId,
+            content: data.content,
+          },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                role: true,
+                image: true,
+              },
+            },
+          },
+        })
 
-      // 1. broadcast to conversation
-      io.to(data.conversationId).emit("new_message", data)
+        // 2. EMIT TO CONVERSATION (MAIN CHAT ROOM)
+        io.to(data.conversationId).emit("new_message", message)
 
-      // 2. also notify receiver (optional UI badge)
-      if (data.receiverId) {
-        io.to(data.receiverId).emit("message_notification", data)
+        // 3. NOTIFY RECEIVER (optional badge system)
+        if (data.receiverId) {
+          io.to(data.receiverId).emit("message_notification", message)
+        }
+
+      } catch (error) {
+        console.error("SEND_MESSAGE_ERROR:", error)
       }
     })
 
@@ -50,7 +74,7 @@ export function initSocket(server: any) {
     // READ RECEIPT
     // =========================
     socket.on("mark_read", ({ conversationId, userId }) => {
-      if (!conversationId) return
+      if (!conversationId || !userId) return
 
       io.to(conversationId).emit("message_read", {
         conversationId,
@@ -62,13 +86,18 @@ export function initSocket(server: any) {
     // TYPING
     // =========================
     socket.on("typing", ({ conversationId, userId }) => {
+      if (!conversationId) return
       socket.to(conversationId).emit("typing", { userId })
     })
 
     socket.on("stop_typing", ({ conversationId, userId }) => {
+      if (!conversationId) return
       socket.to(conversationId).emit("stop_typing", { userId })
     })
 
+    // =========================
+    // DISCONNECT
+    // =========================
     socket.on("disconnect", () => {
       console.log("Disconnected:", socket.id)
     })

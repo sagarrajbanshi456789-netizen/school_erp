@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    
     "target": "ES2017",
     "lib": [
       "dom",
@@ -16,10 +15,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "incremental": true,
     "types": [
-      "better-auth",
+      "better-auth"
     ], // include types for BetterAuth
     "plugins": [
       {

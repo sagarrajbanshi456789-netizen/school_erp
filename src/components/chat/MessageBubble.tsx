@@ -1,8 +1,13 @@
+// src/components/chat/MessageBubble.tsx
+'use client'
+
 type Message = {
-  text: string
+  text?: string
+  content?: string
   from: string
   to: string
-  role?: string
+  role?: "admin" | "user"
+  status?: "sending" | "sent"
 }
 
 interface Props {
@@ -10,16 +15,38 @@ interface Props {
   isOwn: boolean
 }
 
-export default function MessageBubble({ msg, isOwn }: Props) {
+export default function MessageBubble({
+  msg,
+  isOwn,
+}: Props) {
   return (
     <div
-      className={`p-2 rounded max-w-xs ${
-        isOwn
-          ? "bg-blue-500 text-white ml-auto"
-          : "bg-gray-200 dark:bg-gray-700"
+      className={`flex flex-col mb-5 ${
+        isOwn ? "items-end" : "items-start"
       }`}
     >
-      {msg.text}
+      {/* MESSAGE BUBBLE */}
+      <div
+        className={`
+          relative px-4 py-2 rounded-2xl max-w-xs break-words shadow-sm
+          ${
+            isOwn
+              ? "bg-blue-500 text-white rounded-br-md"
+              : "bg-gray-200 dark:bg-gray-700 rounded-bl-md"
+          }
+        `}
+      >
+        {msg.text || msg.content}
+      </div>
+
+      {/* MESSAGE STATUS */}
+      {isOwn && msg.status && (
+        <span className="text-[10px] text-muted-foreground mt-1 px-1">
+          {msg.status === "sending"
+            ? "Sending..."
+            : "Sent"}
+        </span>
+      )}
     </div>
   )
 }

@@ -1,3 +1,4 @@
+// src/components/employee/EditEmployeeDialog.tsx
 "use client"
 
 import { useState } from "react"
@@ -10,11 +11,26 @@ export default function EditEmployeeDialog({ employee }: any) {
   const router = useRouter()
 
   async function handleSubmit(formData: FormData) {
-    await updateEmployee(employee.id, formData)
+  try {
+    const data = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      phone: formData.get("phone") as string,
+    }
+
+    await updateEmployee(employee.id, data)
+
     toast.success("Employee updated")
+
     setOpen(false)
+
     router.refresh()
+  } catch (error) {
+    console.error(error)
+
+    toast.error("Failed to update employee")
   }
+}
 
   return (
     <>
