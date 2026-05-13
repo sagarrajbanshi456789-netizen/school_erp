@@ -2,12 +2,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import {
-    MessageCircle,
-    X,
-    SendHorizontal,
-    
-} from "lucide-react"
+import { MessageCircle, X, SendHorizontal, } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,31 +20,31 @@ type ChatMessage = {
   text: string
   status?: "sending" | "sent"
 }
+
 export default function ChatWidget({ mode }: Props) {
-    const [isSending, setIsSending] = useState(false)
-    const bottomRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
     const [message, setMessage] = useState("")
+    const [isSending, setIsSending] = useState(false)
 
+    const bottomRef = useRef<HTMLDivElement | null>(null)
     const { user } = useBetterAuth()
 
     const role = mode ?? user?.role ?? "PUBLIC"
 
-    // 🚨 hide for admin
-    if (role === "ADMIN") return null
-
+    // 🚨 hide for admin    
     const [messages, setMessages] = useState<ChatMessage[]>([
-  {
-    id: 1,
-    sender: "admin",
-    text: "Hi 👋 Welcome to support.",
-  },
-  {
-    id: 2,
-    sender: "admin",
-    text: "How can we help you today?",
-  },
-])
+        {
+            id: 1,
+            sender: "admin",
+            text: "Hi 👋 Welcome to support.",
+        },
+        {
+            id: 2,
+            sender: "admin",
+            text: "How can we help you today?",
+        },
+    ])
+    if (role === "ADMIN") return null
     const customerQuickMessages = [
         "Hi 👋",
         "Tell me about your company",
@@ -72,46 +67,97 @@ export default function ChatWidget({ mode }: Props) {
 
 
 
-       function sendMessage() {
-  if (!message.trim() || isSending) return
+ 
+  // ✅ SEND MESSAGE TO BACKEND (FIXED)
+  async function sendMessage(text?: string) {
+    const finalText = (text ?? message).trim()
+    if (!finalText || isSending) return
 
-  const tempId = Date.now()
+    const tempId = Date.now()
 
-  const newMessage: ChatMessage = {
-    id: tempId,
-    sender: "user",
-    text: message.trim(),
-    status: "sending",
-  }
+    const newMessage: ChatMessage = {
+      id: tempId,
+      sender: "user",
+      text: finalText,
+      status: "sending",
+    }
 
-  // 1. instantly show message (optimistic UI)
-  setMessages((prev) => [...prev, newMessage])
+    setMessages((prev) => [...prev, newMessage])
+    setMessage("")
+    setIsSending(true)
 
-  setMessage("")
-  setIsSending(true)
+    try {
+      await fetch("/api/chat/message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversationId: user?.id, // adjust if you store real conversationId
+          content: finalText,
+        }),
+      })
 
-  // 2. simulate network delay (Messenger feel)
-  setTimeout(() => {
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === tempId
-          ? { ...msg, status: "sent" }
-          : msg
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, status: "sent" } : m
+        )
       )
-    )
-
-    setIsSending(false)
-  }, 700)
-}
-
-
-
+    } catch (err) {
+      console.error("SEND MESSAGE ERROR:", err)
+    } finally {
+      setIsSending(false)
+    }
+  }
 
 useEffect(() => {
   bottomRef.current?.scrollIntoView({
     behavior: "smooth",
   })
 }, [messages])
+useEffect(() => {
+  async function loadMessages() {
+    if (!user?.id) return
+
+    try {
+      const conversationId = user.id
+
+      const res = await fetch(
+        `/api/chat/message/${conversationId}`
+      )
+
+      const data = await res.json()
+
+      console.log("LOADED_MESSAGES:", data)
+
+      const formatted = data.messages.map((m: any) => ({
+        id: m.id,
+
+        sender:
+          m.senderId === user.id
+            ? "user"
+            : "admin",
+
+        text: m.content,
+
+        status: "sent",
+      }))
+
+      // ✅ keep default welcome messages if DB empty
+      if (formatted.length > 0) {
+        setMessages(formatted)
+      }
+
+    } catch (err) {
+      console.error(
+        "LOAD MESSAGES ERROR:",
+        err
+      )
+    }
+  }
+
+  loadMessages()
+}, [user?.id])
     return (
         <>
             {/* FLOATING BUTTON */}
@@ -290,29 +336,7 @@ useEffect(() => {
                                 {quickMessages.map((msg, index) => (
                                     <button
                                         key={index}
-  onClick={() => {
-  const tempId = Date.now()
-
-  setMessages((prev) => [
-    ...prev,
-    {
-      id: tempId,
-      sender: "user",
-      text: msg,
-      status: "sending",
-    },
-  ])
-
-  setTimeout(() => {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === tempId
-          ? { ...m, status: "sent" }
-          : m
-      )
-    )
-  }, 700)
-}}
+  onClick={() => sendMessage(msg)}
                                         className="
               whitespace-nowrap
               rounded-full
@@ -364,7 +388,7 @@ dark:text-black
       sendMessage()
     }
   }}
-                                    placeholder="Aa"
+                                    placeholder="Type message.."
                                     className="
             h-12
             rounded-full
@@ -384,21 +408,8 @@ dark:text-black
 
                                 <Button
                                     size="icon"
-                                      onClick={sendMessage}
-                                    className="
-            h-12 w-12
-            rounded-full
-
-            bg-black
-            text-white
-
-            hover:bg-neutral-800
-
-            dark:bg-white
-            dark:text-black
-            dark:hover:bg-neutral-200
-
-            shrink-0
+                                      onClick={() => sendMessage()}
+                                    className="h-12 w-12 rounded-full bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 shrink-0
           "
                                 >
                                     <SendHorizontal className="h-5 w-5" />
