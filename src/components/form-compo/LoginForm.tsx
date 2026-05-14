@@ -17,12 +17,7 @@ import PasswordInput from "@/components/password/password-input"
 
 type Role = "ADMIN" | "EMPLOYEE" | "CUSTOMER"
 
-// ✅ Role Hierarchy Access
-const roleAccess: Record<Role, Role[]> = {
-  ADMIN: ["ADMIN", "EMPLOYEE", "CUSTOMER"],
-  EMPLOYEE: ["EMPLOYEE", "CUSTOMER"],
-  CUSTOMER: ["CUSTOMER"],
-}
+
 
 type LoginFormProps = {
   title?: string
@@ -72,7 +67,7 @@ export default function LoginForm({
       const userRole = (user as any)?.role as Role
 
       // 🔐 Role hierarchy check
-      if (role && !roleAccess[userRole]?.includes(role)) return
+      // if (role && !roleAccess[userRole]?.includes(role)) return
 
       if (redirectTo) {
         router.replace(redirectTo)
@@ -165,11 +160,29 @@ export default function LoginForm({
       const user = session.data.user
       const userRole = (user as any)?.role as Role
 
-      // 🔐 Role Hierarchy Guard
-      if (role && !roleAccess[userRole]?.includes(role)) {
-        setError("Unauthorized access for this panel")
-        return
-      }
+      // 🔐 Strict panel access check
+const isAllowed =
+  (role === "ADMIN" && userRole === "ADMIN") ||
+  (role === "EMPLOYEE" &&
+    (userRole === "EMPLOYEE" || userRole === "ADMIN")) ||
+  (role === "CUSTOMER" &&
+    (userRole === "CUSTOMER" ||
+      userRole === "EMPLOYEE" ||
+      userRole === "ADMIN"))
+
+console.log("LOGIN DEBUG")
+console.log("Requested Panel Role:", role)
+console.log("Actual User Role:", userRole)
+console.log("Allowed:", isAllowed)
+
+if (!isAllowed) {
+  console.log("❌ Unauthorized panel login blocked")
+
+  await authClient.signOut()
+
+  setError("Unauthorized access for this panel")
+  return
+}
 
       // 🧠 Remember email persistence
       if (remember) {
@@ -191,13 +204,26 @@ export default function LoginForm({
       if (redirectTo) {
         router.push(redirectTo)
       } else {
-        if (role === "ADMIN") {
-          router.push("/admin/dashboard")
-        } else if (role === "EMPLOYEE") {
-          router.push("/employee/dashboard")
-        } else {
-          router.refresh()
-        }
+   
+// 🚀 Always redirect based on REAL USER ROLE (source of truth)
+// ✅ Redirect only to allowed portal
+// ✅ Redirect based on REAL USER ROLE
+switch (userRole) {
+  case "ADMIN":
+    router.replace("/admin/dashboard")
+    break
+
+  case "EMPLOYEE":
+    router.replace("/employee/dashboard")
+    break
+
+  case "CUSTOMER":
+    router.replace("/customer/dashboard")
+    break
+
+  default:
+    router.replace("/login")
+}
       }
     } catch (err) {
       console.error("Login error:", err)

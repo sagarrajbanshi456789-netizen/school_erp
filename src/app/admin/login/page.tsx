@@ -11,15 +11,19 @@ export default async function AdminLoginPage() {
     headers: await headers(),
   })
 
-  // If already logged in as admin → redirect
-  if (session?.user?.role === "ADMIN") {
+  const user = session?.user
+
+  if (user) {
+  if (user.role === "ADMIN") {
     redirect("/admin/dashboard")
+  } else {
+    redirect(`/${user.role.toLowerCase()}/dashboard`)
   }
+}
 
   return (
-    <LoginForm
-      title="Admin Login"
-      role="ADMIN"
-    />
+    <div className="container py-10">
+      <LoginForm title="Admin Login" role="ADMIN" />
+    </div>
   )
 }
