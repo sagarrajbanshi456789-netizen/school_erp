@@ -160,29 +160,6 @@ export default function LoginForm({
       const user = session.data.user
       const userRole = (user as any)?.role as Role
 
-      // 🔐 Strict panel access check
-const isAllowed =
-  (role === "ADMIN" && userRole === "ADMIN") ||
-  (role === "EMPLOYEE" &&
-    (userRole === "EMPLOYEE" || userRole === "ADMIN")) ||
-  (role === "CUSTOMER" &&
-    (userRole === "CUSTOMER" ||
-      userRole === "EMPLOYEE" ||
-      userRole === "ADMIN"))
-
-console.log("LOGIN DEBUG")
-console.log("Requested Panel Role:", role)
-console.log("Actual User Role:", userRole)
-console.log("Allowed:", isAllowed)
-
-if (!isAllowed) {
-  console.log("❌ Unauthorized panel login blocked")
-
-  await authClient.signOut()
-
-  setError("Unauthorized access for this panel")
-  return
-}
 
       // 🧠 Remember email persistence
       if (remember) {
@@ -205,16 +182,13 @@ if (!isAllowed) {
         router.push(redirectTo)
       } else {
    
-// 🚀 Always redirect based on REAL USER ROLE (source of truth)
-// ✅ Redirect only to allowed portal
-// ✅ Redirect based on REAL USER ROLE
 switch (userRole) {
   case "ADMIN":
     router.replace("/admin/dashboard")
     break
 
   case "EMPLOYEE":
-    router.replace("/employee/dashboard")
+    router.replace("/employee/select-dashboard")
     break
 
   case "CUSTOMER":

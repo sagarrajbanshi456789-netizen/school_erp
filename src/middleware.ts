@@ -7,75 +7,62 @@ import { auth } from "@/lib/auth"
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname
 
-  console.log("🛡️ Middleware Path:", path)
-
   const session = await auth.api.getSession({
     headers: req.headers,
   })
 
   const user = session?.user
 
-  // ❌ Not logged in
+  // =========================
+  // NOT LOGGED IN
+  // =========================
   if (!user) {
-    console.log("❌ No session")
+    const isProtected =
+      path.startsWith("/admin") ||
+      path.startsWith("/employee") ||
+      path.startsWith("/customer")
 
-    // allow login pages
-    if (
-      path.startsWith("/login") ||
-      path.startsWith("/admin/login") ||
-      path.startsWith("/employee/login")
-    ) {
-      return NextResponse.next()
+    if (isProtected) {
+      return NextResponse.redirect(new URL("/login", req.url))
     }
 
-    return NextResponse.redirect(new URL("/login", req.url))
+    return NextResponse.next()
   }
 
   const role = user.role
 
-  console.log("✅ User Role:", role)
-
-  // =====================================================
-  // ADMIN → ONLY ADMIN
-  // =====================================================
+  // =========================
+  // ADMIN
+  // =========================
   if (role === "ADMIN") {
-    if (!path.startsWith("/admin")) {
-      console.log("🚫 ADMIN blocked from:", path)
+    // admin can ONLY access admin routes
+    if (path.startsWith("/admin")) return NextResponse.next()
 
-      return NextResponse.redirect(
-        new URL("/admin/dashboard", req.url)
-      )
-    }
+    return NextResponse.redirect(new URL("/admin/dashboard", req.url))
   }
 
-  // =====================================================
-  // EMPLOYEE → EMPLOYEE + CUSTOMER
-  // =====================================================
+  // =========================
+  // EMPLOYEE
+  // =========================
   if (role === "EMPLOYEE") {
-    const allowed =
+    // employee can access BOTH employee + customer
+    if (
       path.startsWith("/employee") ||
       path.startsWith("/customer")
-
-    if (!allowed) {
-      console.log("🚫 EMPLOYEE blocked from:", path)
-
-      return NextResponse.redirect(
-        new URL("/employee/dashboard", req.url)
-      )
+    ) {
+      return NextResponse.next()
     }
+
+    return NextResponse.redirect(new URL("/employee/dashboard", req.url))
   }
 
-  // =====================================================
-  // CUSTOMER → ONLY CUSTOMER
-  // =====================================================
+  // =========================
+  // CUSTOMER
+  // =========================
   if (role === "CUSTOMER") {
-    if (!path.startsWith("/customer")) {
-      console.log("🚫 CUSTOMER blocked from:", path)
+    if (path.startsWith("/customer")) return NextResponse.next()
 
-      return NextResponse.redirect(
-        new URL("/customer/dashboard", req.url)
-      )
-    }
+    return NextResponse.redirect(new URL("/customer/dashboard", req.url))
   }
 
   return NextResponse.next()
@@ -86,8 +73,5 @@ export const config = {
     "/admin/:path*",
     "/employee/:path*",
     "/customer/:path*",
-    "/login",
-    "/admin/login",
-    "/employee/login",
   ],
 }
