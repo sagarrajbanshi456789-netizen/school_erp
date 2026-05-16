@@ -2,8 +2,10 @@
 'use client'
 
 import { useState } from 'react'
+
 import ChatList from './ChatList'
-import AdminChatWindow from './AdminChatWindow'
+import ChatWidget from './ChatWidget'
+
 import { useBetterAuth } from '@/lib/useBetterAuth'
 
 interface User {
@@ -21,16 +23,18 @@ export default function AdminInbox() {
   const [conversationId, setConversationId] =
     useState<string | null>(null)
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] =
+    useState(false)
 
-  const [error, setError] = useState<string | null>(
-    null
-  )
+  const [error, setError] =
+    useState<string | null>(null)
 
   // =========================
   // SELECT USER
   // =========================
-  const handleSelectUser = async (user: User) => {
+  const handleSelectUser = async (
+    user: User
+  ) => {
     if (!admin?.id) return
 
     setSelectedUser(user)
@@ -44,7 +48,8 @@ export default function AdminInbox() {
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type':
+              'application/json',
           },
           body: JSON.stringify({
             userId: user.id,
@@ -59,7 +64,9 @@ export default function AdminInbox() {
 
       if (
         !contentType ||
-        !contentType.includes('application/json')
+        !contentType.includes(
+          'application/json'
+        )
       ) {
         const text = await res.text()
 
@@ -82,11 +89,12 @@ export default function AdminInbox() {
 
       if (!res.ok) {
         throw new Error(
-          data?.error || 'Failed to load chat'
+          data?.error ||
+            'Failed to load chat'
         )
       }
 
-      // ✅ SUPPORT BOTH FORMATS
+      // Support both formats
       const conversation =
         data.conversation || data
 
@@ -96,7 +104,9 @@ export default function AdminInbox() {
         )
       }
 
-      setConversationId(conversation.id)
+      setConversationId(
+        conversation.id
+      )
     } catch (err: any) {
       console.error(
         'GET_CONVERSATION_ERROR:',
@@ -114,10 +124,10 @@ export default function AdminInbox() {
 
   return (
     <div className="h-full flex rounded-2xl overflow-hidden border shadow-sm bg-background">
-
+      
       {/* LEFT PANEL */}
       <div className="w-[300px] md:w-[320px] border-r bg-muted/30 flex flex-col">
-
+        
         {/* HEADER */}
         <div className="p-4 border-b">
           <h2 className="text-lg font-semibold">
@@ -153,6 +163,7 @@ export default function AdminInbox() {
         {/* ERROR */}
         {!loading && error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+            
             <div className="text-red-500 font-medium">
               {error}
             </div>
@@ -177,18 +188,23 @@ export default function AdminInbox() {
         !error &&
         conversationId &&
         selectedUser ? (
-          <AdminChatWindow
-            key={conversationId}
-            conversationId={
-              conversationId
-            }
-            user={selectedUser}
-            adminId={admin?.id || ''}
-          />
+          <div className="h-full">
+            <ChatWidget
+              key={conversationId}  
+              title={selectedUser?.name || selectedUser?.email || "User Chat"}
+              mode="ADMIN"
+              embedded
+              conversationId={
+                conversationId
+              }
+              userId={admin?.id || ''}
+            />
+          </div>
         ) : (
           !loading &&
           !error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+              
               <div className="text-5xl mb-3">
                 💬
               </div>

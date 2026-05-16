@@ -1,10 +1,18 @@
 // src/app/employee/dashboard/layout.tsx
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import EmployeeSidebar from '@/components/employee/EmployeeSidebar'
 import EmployeeNavbar from '@/components/employee/EmployeeNavbar'
 import ChatWidget from '@/components/chat/ChatWidget'
+import { useBetterAuth } from '@/lib/useBetterAuth'
+
+interface ConversationResponse {
+  success: boolean
+  conversation: {
+    id: string
+  }
+}
 
 export default function EmployeeLayout({
   children,
@@ -13,6 +21,60 @@ export default function EmployeeLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+   const { user } = useBetterAuth()
+   const [conversationId, setConversationId] = useState<string | null>(null)
+   const [initialized, setInitialized] = useState(false)
+   const chatReady = !!user?.id && !!conversationId
+   useEffect(() => {
+     if (!user?.id) {
+       setConversationId(null)
+       setInitialized(false)
+      }
+    }, [user?.id])
+ // =========================
+  // INIT EMPLOYEE CONVERSATION
+  // =========================
+  useEffect(() => {
+  if (initialized) return
+
+  const initConversation = async () => {
+    try {
+      if (!user?.id) return
+
+      setInitialized(true)
+
+      const res = await fetch('/api/chat/conversation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to create conversation')
+      }
+
+      const data: ConversationResponse = await res.json()
+
+      console.log("Conversation response:", data)
+
+      if (!data?.conversation?.id) {
+        throw new Error('Invalid conversation response')
+      }
+
+      setConversationId(data.conversation.id)
+
+    } catch (err) {
+      console.error('Conversation init failed:', err)
+      setInitialized(false)
+    }
+  }
+
+  initConversation()
+}, [user?.id, initialized])
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden transition-colors">
@@ -53,7 +115,15 @@ export default function EmployeeLayout({
       </div>
 
       {/* 💬 GLOBAL CHAT WIDGET (EMPLOYEE MODE) */}
-      <ChatWidget mode="EMPLOYEE" />
+         {/* GLOBAL EMPLOYEE CHAT */}
+      {chatReady &&  (
+        <ChatWidget
+          mode="EMPLOYEE"
+          userId={user.id}
+          conversationId={conversationId!}
+          embedded={false}
+        />
+      )}
 
     </div>
   )

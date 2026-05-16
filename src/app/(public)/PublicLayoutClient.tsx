@@ -1,20 +1,71 @@
-// src/app/%28public%29/PublicLayoutClient.tsx
 "use client"
 
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import { Navbar } from "@/components/public-layout-compo/Navbar"
 import Footer from "@/components/public-layout-compo/Footer"
 import { Toaster } from "@/components/ui/sonner"
 import ChatWidget from "@/components/chat/ChatWidget"
+import { useBetterAuth } from "@/lib/useBetterAuth"
+
+interface Conversation {
+  id: string
+}
+
 export default function PublicLayoutClient({
   children,
 }: {
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { user } = useBetterAuth()
 
-  // Hide navbar/footer for 4-segment dynamic route
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
   const hideLayout = /^\/[^/]+\/[^/]+\/[^/]+\/[^/]+$/.test(pathname)
+
+  useEffect(() => {
+    // console.log("🟢 CURRENT LOGGED IN USER:", user)
+  }, [user])
+
+  // =====================
+  // ONLY CREATE CHAT FOR LOGGED-IN USERS
+  // =====================
+  useEffect(() => {
+    const initConversation = async () => {
+      if (!user?.id) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+
+        const res = await fetch("/api/chat/conversation", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.id,
+          }),
+        })
+
+        if (!res.ok) throw new Error("Failed to create conversation")
+
+        const data = await res.json()
+
+        setConversationId(data?.conversation?.id || null)
+      } catch (err) {
+        console.error("Failed to init public chat:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    initConversation()
+  }, [user?.id])
 
   return (
     <>
@@ -23,8 +74,16 @@ export default function PublicLayoutClient({
       <main>{children}</main>
 
       {!hideLayout && <Footer />}
-  {/* 💬 CUSTOMER CHAT ONLY */}
-      {!hideLayout && <ChatWidget mode="PUBLIC" />}
+
+      {/* 💬 CHAT ONLY FOR LOGGED-IN USERS */}
+      {user?.id && !loading && conversationId && (
+        <ChatWidget
+          mode="PUBLIC"
+          conversationId={conversationId}
+          userId={user.id}
+        />
+      )}
+
       <Toaster richColors position="top-right" />
     </>
   )
