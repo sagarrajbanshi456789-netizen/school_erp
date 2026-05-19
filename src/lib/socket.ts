@@ -1,4 +1,3 @@
-// src/lib/socket.ts
 "use client"
 
 import { io, Socket } from "socket.io-client"
@@ -6,142 +5,103 @@ import { io, Socket } from "socket.io-client"
 let socket: Socket | null = null
 
 // =========================
-// GET SOCKET INSTANCE
+// CREATE SOCKET
 // =========================
 export const getSocket = (): Socket => {
+  if (socket) return socket
 
-  // reuse existing socket
-  if (socket) {
-    return socket
-  }
+  console.log("🟢 CREATING SOCKET INSTANCE")
 
-  console.log(
-    "\n🟢 CREATING SOCKET INSTANCE"
-  )
-
-  console.log(
-    "SOCKET URL:",
-    process.env.NEXT_PUBLIC_SOCKET_URL
-      || "http://localhost:3000"
-  )
-
-  socket = io(
-    process.env.NEXT_PUBLIC_SOCKET_URL
-      || "http://localhost:3000",
-    {
-      transports: ["websocket", "polling"],
-      autoConnect: false,
-    }
-  )
+  socket = io({
+    transports: ["websocket", "polling"],
+    autoConnect: false,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+  })
 
   // =========================
-  // DEBUG EVENTS
+  // CONNECTION
   // =========================
-
   socket.on("connect", () => {
-    console.log(
-      "✅ SOCKET CONNECTED:",
-      socket?.id
-    )
+    console.log("✅ CONNECTED:", socket?.id)
+
+    // restore presence after reconnect
+    socket?.emit("user_online")
   })
 
   socket.on("disconnect", (reason) => {
-    console.log(
-      "🔴 SOCKET DISCONNECTED:",
-      reason
-    )
+    console.log("🔴 DISCONNECTED:", reason)
   })
 
-  socket.on("connect_error", (error) => {
-    console.error(
-      "❌ SOCKET CONNECT ERROR:",
-      error
-    )
-  })
-
-  socket.on("error", (error) => {
-    console.error(
-      "❌ SOCKET ERROR:",
-      error
-    )
-  })
-
+  // =========================
+  // RECONNECT EVENTS
+  // =========================
   socket.io.on("reconnect", (attempt) => {
-    console.log(
-      "🟡 SOCKET RECONNECTED:",
-      attempt
-    )
+    console.log("🟡 RECONNECTED:", attempt)
+
+    socket?.emit("user_online")
   })
 
   socket.io.on("reconnect_attempt", (attempt) => {
-    console.log(
-      "🟡 RECONNECT ATTEMPT:",
-      attempt
-    )
+    console.log("🟡 RECONNECT ATTEMPT:", attempt)
   })
 
-  socket.io.on("reconnect_error", (error) => {
-    console.error(
-      "❌ RECONNECT ERROR:",
-      error
-    )
+  socket.io.on("reconnect_error", (err) => {
+    console.error("❌ RECONNECT ERROR:", err)
+  })
+
+  // =========================
+  // CHAT EVENTS (GLOBAL LISTENERS)
+  // =========================
+
+  socket.on("user_online", (userId) => {
+    console.log("🟢 USER ONLINE:", userId)
+  })
+
+  socket.on("user_offline", (userId) => {
+    console.log("🔴 USER OFFLINE:", userId)
+  })
+
+  socket.on("typing", ({ userId }) => {
+    console.log("✍️ TYPING:", userId)
+  })
+
+  socket.on("stop_typing", ({ userId }) => {
+    console.log("✍️ STOP TYPING:", userId)
+  })
+
+  socket.on("message_read", ({ conversationId, userId }) => {
+    console.log("👁️ MESSAGE READ:", conversationId, userId)
+  })
+
+  socket.on("new_message", (msg) => {
+    console.log("💬 NEW MESSAGE:", msg)
   })
 
   return socket
 }
 
 // =========================
-// CONNECT SOCKET
+// CONNECT USER
 // =========================
-export const connectSocket = (
-  userId: string
-): Socket => {
-
+export const connectSocket = (userId: string): Socket => {
   const s = getSocket()
 
-  console.log(
-    "\n🟢 CONNECT SOCKET CALLED"
-  )
-
-  console.log("USER ID:", userId)
-
-  // avoid duplicate connect
   if (!s.connected) {
-
-    console.log(
-      "🟡 SOCKET NOT CONNECTED → CONNECTING..."
-    )
-
+    console.log("🟡 CONNECTING SOCKET...")
     s.connect()
-
-  } else {
-
-    console.log(
-      "✅ SOCKET ALREADY CONNECTED"
-    )
   }
 
-  // prevent duplicate listeners
+  // avoid duplicate listeners
   s.off("connect")
 
   s.on("connect", () => {
+    console.log("✅ SOCKET CONNECTED:", s.id)
 
-    console.log(
-      "✅ SOCKET CONNECT SUCCESS:",
-      s.id
-    )
-
-    // join personal room
     if (userId) {
-
-      console.log(
-        "🟢 JOINING USER ROOM:",
-        userId
-      )
-
-      s.emit("join_user", {
-        userId,
-      })
+      s.emit("join_user", { userId })
+      s.emit("user_online", { userId })
     }
   })
 
@@ -151,30 +111,18 @@ export const connectSocket = (
 // =========================
 // DISCONNECT SOCKET
 // =========================
-export const disconnectSocket = () => {
+export const disconnectSocket = (userId?: string) => {
+  if (!socket) return
 
-  console.log(
-    "\n🔴 DISCONNECT SOCKET CALLED"
-  )
+  console.log("🔴 DISCONNECTING SOCKET")
 
-  if (socket) {
-
-    console.log(
-      "🟡 REMOVING ALL LISTENERS"
-    )
-
-    socket.removeAllListeners()
-
-    console.log(
-      "🟡 DISCONNECTING SOCKET"
-    )
-
-    socket.disconnect()
-
-    socket = null
-
-    console.log(
-      "✅ SOCKET RESET COMPLETE"
-    )
+  if (userId) {
+    socket.emit("user_offline", { userId })
   }
+
+  socket.removeAllListeners()
+  socket.disconnect()
+  socket = null
+
+  console.log("✅ SOCKET CLEANED")
 }

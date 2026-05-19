@@ -1,8 +1,16 @@
 // src/server/socket-instance.ts
-import { Server } from "socket.io"
+import type { Server } from "socket.io"
 
-export let io: Server
+let io: Server | null = null
 
 export function setSocket(server: Server) {
   io = server
+}
+
+export function getSocket() {
+  if (!io) {
+    throw new Error("Socket.io not initialized")
+  }
+
+  return io
 }

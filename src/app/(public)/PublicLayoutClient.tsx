@@ -20,7 +20,7 @@ export default function PublicLayoutClient({
   const pathname = usePathname()
   const { user } = useBetterAuth()
 
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<string>("")
   const [loading, setLoading] = useState(true)
 
   const hideLayout = /^\/[^/]+\/[^/]+\/[^/]+\/[^/]+$/.test(pathname)
@@ -56,7 +56,7 @@ export default function PublicLayoutClient({
 
         const data = await res.json()
 
-        setConversationId(data?.conversation?.id || null)
+        setConversationId(data?.conversation?.id || "")
       } catch (err) {
         console.error("Failed to init public chat:", err)
       } finally {
@@ -76,13 +76,13 @@ export default function PublicLayoutClient({
       {!hideLayout && <Footer />}
 
       {/* 💬 CHAT ONLY FOR LOGGED-IN USERS */}
-      {user?.id && !loading && conversationId && (
+      
         <ChatWidget
           mode="PUBLIC"
           conversationId={conversationId}
-          userId={user.id}
+          userId={user?.id ?? ""}
         />
-      )}
+      
 
       <Toaster richColors position="top-right" />
     </>

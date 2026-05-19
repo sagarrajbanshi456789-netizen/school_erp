@@ -18,7 +18,7 @@ export default function EmployeeSelectDashboard() {
           Employee Dashboard
         </Button>
 
-        <Button onClick={() => router.push("/customer/dashboard")}>
+        <Button onClick={() => router.push("/")}>
           Customer Dashboard
         </Button>
       </div>

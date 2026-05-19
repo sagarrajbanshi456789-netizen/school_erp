@@ -166,10 +166,7 @@ model Publication {
   title String
   slug  String @unique
 
-  description String
-
-  href String
-
+  description String @db.Text
   author String?
 
   coverImage String?

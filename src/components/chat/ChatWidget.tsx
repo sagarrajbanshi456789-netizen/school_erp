@@ -43,9 +43,9 @@ export default function ChatWidget({
   title,
 }: Props) {    
   const { user } = useBetterAuth()
-const finalUserId = userId ?? user?.id
+const finalUserId = userId?.trim() || user?.id
 
-if (!finalUserId) return null
+// if (!finalUserId) return null
   const dbg = (...a: any[]) => console.debug("[ChatWidget]", ...a)
 
   const role = mode ?? user?.role ?? "PUBLIC"
@@ -55,7 +55,7 @@ if (!finalUserId) return null
   const isAdmin = role === "ADMIN"
   dbg("isAdmin:", isAdmin)
 
-  const { socket } = useChatSocket(userId)
+  const { socket } = useChatSocket(finalUserId)
   dbg("socket:", socket)
 
   const [open, setOpen] = useState(
@@ -233,7 +233,12 @@ if (!finalUserId) return null
   dbg("headerTitle:", headerTitle)
 
   dbg("rendering ChatWidget", { open, isLoggedIn, embedded, messagesLength: messages.length })
-
+console.log("FLOATING DEBUG", {
+  embedded,
+  isLoggedIn,
+  userId,
+  finalUserId,
+})
   return (
     <>
       {/* FLOATING BUTTON (ALWAYS VISIBLE) */}
@@ -281,66 +286,263 @@ if (!finalUserId) return null
       {/* CHAT WINDOW */}
       {/* ===================== */}
       {open && isLoggedIn && (
-        <div
-          className={cn(
-            embedded || isAdmin
-              ? "h-full w-full flex flex-col"
-              : "fixed bottom-24 right-6 w-[380px] h-[620px]",
-            "border rounded-xl bg-background overflow-hidden"
-          )}
-        >
-          {/* HEADER */}
-          <div className="h-14 border-b flex items-center px-4 font-semibold">
-            {headerTitle}
-          </div>
+  <div
+    className={cn(
+      embedded || isAdmin
+        ? "h-full w-full"
+        : "fixed bottom-24 right-6 w-[380px] h-[620px]",
+      "border rounded-2xl bg-background overflow-hidden flex flex-col shadow-2xl "
+    )}
+  >
+    {/* HEADER */}
+    <div  className={cn(
+        "h-14 shrink-0 border-b px-4 flex items-center font-semibold",
+        "border-border",
+        "bg-gradient-to-r from-blue-600 to-indigo-600",
+        "text-white"
+      )}>
+      {headerTitle}
+    </div>
 
-          {/* MESSAGES */}
-          <ScrollArea className="flex-1 p-4">
-            {messages.map(m => (
+    {/* MESSAGES */}
+   <div
+  className={cn(
+    "relative flex-1 min-h-0 overflow-hidden",
+
+    // Gradient
+    "bg-gradient-to-br",
+
+    // Light Theme
+    "from-pink-100 via-background to-rose-100",
+
+    // Dark Theme
+    "dark:from-emerald-950 dark:via-background dark:to-cyan-950"
+  )}
+>
+      {/* ANIMATED BUBBLES BACKGROUND */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {[...Array(10)].map((_, i) => (
+          <span
+            key={i}
+               className={cn(
+          "absolute bottom-[-120px] rounded-full animate-chat-bubble",
+
+          // LIGHT THEME bubbles
+          "bg-pink-300",
+
+          // DARK THEME bubbles
+          "dark:bg-emerald-700"
+        )}
+            style={{
+              width:
+                i === 0
+                  ? 40
+                  : i === 1
+                  ? 20
+                  : i === 2
+                  ? 50
+                  : i === 3
+                  ? 80
+                  : i === 4
+                  ? 35
+                  : i === 5
+                  ? 45
+                  : i === 6
+                  ? 90
+                  : i === 7
+                  ? 25
+                  : i === 8
+                  ? 15
+                  : 90,
+
+              height:
+                i === 0
+                  ? 40
+                  : i === 1
+                  ? 20
+                  : i === 2
+                  ? 50
+                  : i === 3
+                  ? 80
+                  : i === 4
+                  ? 35
+                  : i === 5
+                  ? 45
+                  : i === 6
+                  ? 90
+                  : i === 7
+                  ? 25
+                  : i === 8
+                  ? 15
+                  : 90,
+
+              left:
+                i === 0
+                  ? "10%"
+                  : i === 1
+                  ? "20%"
+                  : i === 2
+                  ? "35%"
+                  : i === 3
+                  ? "50%"
+                  : i === 4
+                  ? "55%"
+                  : i === 5
+                  ? "65%"
+                  : i === 6
+                  ? "70%"
+                  : i === 7
+                  ? "80%"
+                  : i === 8
+                  ? "70%"
+                  : "25%",
+
+              animationDuration:
+                i === 0
+                  ? "8s"
+                  : i === 1
+                  ? "5s"
+                  : i === 2
+                  ? "7s"
+                  : i === 3
+                  ? "11s"
+                  : i === 4
+                  ? "6s"
+                  : i === 5
+                  ? "8s"
+                  : i === 6
+                  ? "12s"
+                  : i === 7
+                  ? "6s"
+                  : i === 8
+                  ? "5s"
+                  : "10s",
+
+              animationDelay:
+                i === 0
+                  ? "0s"
+                  : i === 1
+                  ? "1s"
+                  : i === 2
+                  ? "2s"
+                  : i === 3
+                  ? "0s"
+                  : i === 4
+                  ? "1s"
+                  : i === 5
+                  ? "3s"
+                  : i === 6
+                  ? "2s"
+                  : i === 7
+                  ? "2s"
+                  : i === 8
+                  ? "1s"
+                  : "4s",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* SCROLLABLE CHAT */}
+      <div className="relative z-10 h-full">
+      <ScrollArea className="h-full">
+        <div className="flex flex-col p-4 space-y-3">
+          {messages.map((m) => (
+            <div
+              key={m.id}
+              className={cn(
+                "flex w-full",
+                m.sender === "admin"
+                  ? "justify-start"
+                  : "justify-end"
+              )}
+            >
               <div
-                key={m.id}
-                className={cn(
-                  "flex mb-2",
-                  m.sender === "admin"
-                    ? "justify-start"
-                    : "justify-end"
+                  className={cn(
+                    "max-w-[75%] break-words rounded-2xl px-4 py-2 text-sm shadow-md",
+                    "transition-colors",
+                  m.sender === "admin"   ? [
+                        "bg-pink-700 text-foreground",
+                        "border border-border",
+                        "rounded-bl-md",
+                      ]
+                    : [
+                        "bg-blue-600 text-white",
+                        "dark:bg-blue-500",
+                        "rounded-br-md",
+                      ]
                 )}
               >
-                <div
-                  className={cn(
-                    "px-3 py-2 rounded-xl text-sm max-w-[75%]",
-                    m.sender === "admin"
-                      ? "bg-muted"
-                      : "bg-black text-white"
-                  )}
-                >
-                  {m.text}
-                </div>
+                {m.text}
               </div>
-            ))}
-            <div ref={bottomRef} />
-          </ScrollArea>
+            </div>
+          ))}
 
-          {/* INPUT */}
-          <div className="p-3 border-t flex gap-2">
-            <Input
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              placeholder="Type message..."
-            />
-
-            <Button onClick={sendMessage}>
-              <SendHorizontal className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* AUTO SCROLL TARGET */}
+          <div ref={bottomRef} />
         </div>
-      )}
+      </ScrollArea>
+    </div>
+    </div>
+
+    {/* INPUT */}
+    <div
+  className={cn(
+    "relative z-20 shrink-0 border-t p-3",
+    "border-border",
+
+    // LIGHT MODE
+    "bg-sky-100",
+
+    // DARK MODE
+    "dark:bg-red-950"
+  )}
+>
+      <div className="flex items-center gap-2">
+        <Input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              sendMessage()
+            }
+          }}
+          placeholder="Type a message..."
+            className={cn(
+    "flex-1",
+
+    // LIGHT
+    "bg-white text-black border-sky-200",
+    "placeholder:text-slate-500",
+
+    // DARK
+    "dark:bg-red-900",
+    "dark:text-white",
+    "dark:border-red-800",
+    "dark:placeholder:text-red-200",
+
+    // FOCUS
+    "focus-visible:ring-blue-500"
+  )}
+        />
+
+        <Button
+          size="icon"
+          onClick={sendMessage}
+          disabled={!message.trim()}
+           className={cn(
+            "bg-blue-600 text-white",
+            "hover:bg-blue-700",
+            "dark:bg-blue-500 dark:hover:bg-blue-600"
+          )}
+        >
+          <SendHorizontal className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   )
 }

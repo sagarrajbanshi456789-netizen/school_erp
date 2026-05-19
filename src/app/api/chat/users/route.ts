@@ -1,3 +1,4 @@
+// src/app/api/chat/users/route.ts
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
@@ -47,7 +48,7 @@ export async function GET() {
 
     const formattedUsers = users.map((u) => {
       const conversation =
-        u.conversationParticipants?.[0]?.conversation
+        (u as any).conversationParticipants?.[0]?.conversation
 
       const lastMsg = conversation?.messages?.[0]
 

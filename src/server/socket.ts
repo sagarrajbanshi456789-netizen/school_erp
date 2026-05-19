@@ -1,4 +1,3 @@
-// src/server/socket.ts
 import { Server } from "socket.io"
 import { prisma } from "@/lib/prisma"
 
@@ -10,35 +9,51 @@ export function initSocket(server: any) {
     transports: ["websocket", "polling"],
   })
 
+  console.log("🟢 SOCKET SERVER INITIALIZED")
+
   io.on("connection", (socket) => {
-    console.log("Connected:", socket.id)
+    console.log("🟢 Connected:", socket.id)
+
+    let currentUserId: string | null = null
 
     // =========================
-    // JOIN USER ROOM
+    // USER JOIN (ONLINE STATUS)
     // =========================
     socket.on("join_user", ({ userId }) => {
       if (!userId) return
+
+      currentUserId = userId
       socket.join(userId)
+
+      console.log(`👤 User online: ${userId}`)
+
+      io.emit("user_online", userId)
     })
 
     // =========================
-    // JOIN CONVERSATION ROOM
+    // JOIN CONVERSATION
     // =========================
     socket.on("join_conversation", ({ conversationId }) => {
       if (!conversationId) return
+
       socket.join(conversationId)
+
+      console.log(`💬 Joined conversation: ${conversationId}`)
     })
 
     // =========================
-    // SEND MESSAGE (CLEAN + SAFE)
+    // SEND MESSAGE
     // =========================
     socket.on("send_message", async (data) => {
       try {
-        if (!data?.conversationId || !data?.senderId || !data?.content) {
+        if (
+          !data?.conversationId ||
+          !data?.senderId ||
+          !data?.content
+        ) {
           return
         }
 
-        // 1. SAVE TO DB
         const message = await prisma.message.create({
           data: {
             conversationId: data.conversationId,
@@ -57,21 +72,25 @@ export function initSocket(server: any) {
           },
         })
 
-        // 2. EMIT TO CONVERSATION (MAIN CHAT ROOM)
-        io.to(data.conversationId).emit("new_message", message)
+        io.to(data.conversationId).emit(
+          "new_message",
+          message
+        )
 
-        // 3. NOTIFY RECEIVER (optional badge system)
         if (data.receiverId) {
-          io.to(data.receiverId).emit("message_notification", message)
+          io.to(data.receiverId).emit(
+            "message_notification",
+            message
+          )
         }
 
       } catch (error) {
-        console.error("SEND_MESSAGE_ERROR:", error)
+        console.error("❌ SEND_MESSAGE_ERROR:", error)
       }
     })
 
     // =========================
-    // READ RECEIPT
+    // READ RECEIPT (✓✓)
     // =========================
     socket.on("mark_read", ({ conversationId, userId }) => {
       if (!conversationId || !userId) return
@@ -83,23 +102,35 @@ export function initSocket(server: any) {
     })
 
     // =========================
-    // TYPING
+    // TYPING INDICATOR
     // =========================
     socket.on("typing", ({ conversationId, userId }) => {
       if (!conversationId) return
-      socket.to(conversationId).emit("typing", { userId })
+
+      socket.to(conversationId).emit("typing", {
+        userId,
+      })
     })
 
     socket.on("stop_typing", ({ conversationId, userId }) => {
       if (!conversationId) return
-      socket.to(conversationId).emit("stop_typing", { userId })
+
+      socket.to(conversationId).emit("stop_typing", {
+        userId,
+      })
     })
 
     // =========================
-    // DISCONNECT
+    // DISCONNECT (OFFLINE STATUS)
     // =========================
     socket.on("disconnect", () => {
-      console.log("Disconnected:", socket.id)
+      console.log("🔴 Disconnected:", socket.id)
+
+      if (currentUserId) {
+        console.log(`👤 User offline: ${currentUserId}`)
+
+        io.emit("user_offline", currentUserId)
+      }
     })
   })
 

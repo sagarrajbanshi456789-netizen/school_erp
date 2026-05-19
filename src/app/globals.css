@@ -124,3 +124,28 @@ html, body, #__next {
 .neon-badge {
   box-shadow: 0 0 8px rgba(236,72,153,0.6);
 }
+@keyframes chat-bubble {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: translateY(-400px) translateX(80px);
+  }
+
+  100% {
+    transform: translateY(-900px) translateX(-120px);
+    opacity: 0;
+  }
+}
+
+.animate-chat-bubble {
+  animation-name: chat-bubble;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}

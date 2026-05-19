@@ -151,7 +151,7 @@ async function main() {
     "higher-secondary": ["Class 11", "Class 12"],
     bachelors: ["B1", "B2", "B3", "B4"],
     masters: ["M1", "M2"],
-    gaming: ["Chess", "Ludo"],
+    gaming: ["Chess", "Ludo", "Tic Tac Toe"],
     loksewa: ["L1", "L2", "L3"],
   }
 
@@ -239,8 +239,7 @@ async function main() {
     create: {
       title: "Math Book 1",
       slug: "math-book-1",
-      description: "Math Book",
-      href: "/math-book-1",
+      description: "Math Book",      
       author: "School ERP",
       totalPages: 8,
       subjectId: mathSubject.id,
