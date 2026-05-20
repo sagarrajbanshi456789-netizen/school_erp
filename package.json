@@ -1,6 +1,18 @@
 {
   "name": "school_erp",
   "version": "0.1.0",
+   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "better-sqlite3",
+      "esbuild",
+      "msw",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
