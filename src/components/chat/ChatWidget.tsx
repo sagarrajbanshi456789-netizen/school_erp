@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 import { cn } from "@/lib/utils"
 import { useBetterAuth } from "@/lib/useBetterAuth"
+import { useAuthModal } from "@/store/useAuthModal"
 import { useChatSocket } from "@/hooks/useChatSocket"
 
 // ===================== TYPES
@@ -43,6 +44,7 @@ export default function ChatWidget({
   title,
 }: Props) {    
   const { user } = useBetterAuth()
+  const { openModal } = useAuthModal()
 const finalUserId = userId?.trim() || user?.id
 
 // if (!finalUserId) return null
@@ -273,12 +275,12 @@ console.log("FLOATING DEBUG", {
             Please login first to use chat system
           </p>
 
-          <Button
-            className="w-full"
-            onClick={() => (window.location.href = "/login")}
-          >
-            Login
-          </Button>
+         <Button
+  className="w-full"
+  onClick={() => openModal("login")}
+>
+  Login
+</Button>
         </div>
       )}
 

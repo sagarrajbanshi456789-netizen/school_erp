@@ -1,4 +1,3 @@
-// src/components/games/chess/ChessGame.tsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -41,6 +40,7 @@ export default function ChessGame() {
 
   const [game, setGame] = useState<GameData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
   const [whiteTime, setWhiteTime] = useState(600)
   const [blackTime, setBlackTime] = useState(600)
 
@@ -49,219 +49,98 @@ export default function ChessGame() {
     to: string
   } | null>(null)
 
-  // safer user color
-  const userColor =
-    game && userId === game.whitePlayer?.id
-      ? "white"
-      : game && userId === game.blackPlayer?.id
-      ? "black"
-      : "white"
-
-  const opponent =
-    game &&
-    (userColor === "white"
-      ? game.blackPlayer
-      : game.whitePlayer)
-
-  // Parse time control
-  useEffect(() => {
-    if (!game?.timeControl) return
-
-    const [baseTime] =
-      game.timeControl.split("+").map(Number)
-
-    setWhiteTime(baseTime * 60)
-    setBlackTime(baseTime * 60)
-  }, [game?.timeControl])
-
-  // Fetch Game (FIXED)
-  useEffect(() => {
-    if (!gameId) return
-
-    fetchGame()
-
-    const interval = setInterval(() => {
-      fetchGame()
-    }, 2000)
-
-    return () => clearInterval(interval)
-  }, [gameId])
-
-  // Timer
-  useEffect(() => {
-    if (!game || game.status !== "ACTIVE") return
-
-    const interval = setInterval(() => {
-      if (game.currentTurn === "white") {
-        setWhiteTime((t) =>
-          t > 0 ? t - 1 : 0
-        )
-      } else {
-        setBlackTime((t) =>
-          t > 0 ? t - 1 : 0
-        )
-      }
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [game])
-
-  // Timeout
-  useEffect(() => {
-    if (whiteTime === 0 || blackTime === 0) {
-      handleTimeout()
-    }
-  }, [whiteTime, blackTime])
-
+  // ---------------------------
+  // FETCH GAME
+  // ---------------------------
   async function fetchGame() {
     if (!gameId) return
 
     try {
-      const response = await fetch(
-        `/api/games/chess/${gameId}`
-      )
+      const res = await fetch(`/api/games/chess/${gameId}`)
+      if (!res.ok) throw new Error()
 
-      if (!response.ok) throw new Error()
-
-      const data: GameData =
-        await response.json()
-
+      const data: GameData = await res.json()
       setGame(data)
 
-      if (data.moves.length > 0) {
-        const move =
-          data.moves[data.moves.length - 1]
-
+      const last = data.moves?.at(-1)
+      if (last) {
         setLastMove({
-          from: move.from,
-          to: move.to,
+          from: last.from,
+          to: last.to,
         })
       }
-    } catch (error) {
-      console.error(error)
+    } catch (err) {
+      console.error(err)
       toast.error("Failed to fetch game")
     } finally {
       setIsLoading(false)
     }
   }
 
-  async function handleTimeout() {
+  // ---------------------------
+  // INIT LOAD + POLLING
+  // ---------------------------
+  useEffect(() => {
     if (!gameId) return
 
-    const timedOutColor =
-      whiteTime === 0 ? "white" : "black"
+    fetchGame()
 
-    const winner =
-      timedOutColor === "white"
-        ? "black"
-        : "white"
+    const interval = setInterval(fetchGame, 2000)
+    return () => clearInterval(interval)
+  }, [gameId])
 
-    try {
-      const response = await fetch(
-        `/api/games/chess/${gameId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            status: "COMPLETED",
-            result:
-              winner === "white"
-                ? "WHITE_WIN"
-                : "BLACK_WIN",
-            resultReason: "TIMEOUT",
-          }),
-        }
-      )
+  // ---------------------------
+  // USER COLOR (SAFE)
+  // ---------------------------
+  const userColor: "white" | "black" | null =
+    !game || !userId
+      ? null
+      : userId === game.whitePlayer.id
+      ? "white"
+      : userId === game.blackPlayer.id
+      ? "black"
+      : null
 
-      if (!response.ok) throw new Error()
+  const opponent =
+    game && userColor
+      ? userColor === "white"
+        ? game.blackPlayer
+        : game.whitePlayer
+      : null
 
-      toast.error(
-        `${
-          winner === "white"
-            ? "White"
-            : "Black"
-        } wins on time ⏱️`
-      )
+  // ---------------------------
+  // TIME CONTROL
+  // ---------------------------
+  useEffect(() => {
+    if (!game?.timeControl) return
 
-      await fetchGame()
-    } catch (error) {
-      console.error(error)
-    }
-  }
+    const [base] = game.timeControl.split("+").map(Number)
 
-  async function handleReset() {
-    try {
-      const response = await fetch(
-        `/api/games`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            opponentId: opponent?.id,
-            timeControl:
-              game?.timeControl || "10+0",
-          }),
-        }
-      )
+    setWhiteTime(base * 60)
+    setBlackTime(base * 60)
+  }, [game?.timeControl])
 
-      if (!response.ok) throw new Error()
+  // ---------------------------
+  // TIMER (LOCAL)
+  // ---------------------------
+  useEffect(() => {
+    if (!game || game.status !== "ACTIVE") return
 
-      const newGame =
-        await response.json()
+    const interval = setInterval(() => {
+      if (game.currentTurn === "white") {
+        setWhiteTime((t) => Math.max(t - 1, 0))
+      } else {
+        setBlackTime((t) => Math.max(t - 1, 0))
+      }
+    }, 1000)
 
-      setGame(newGame)
-      setLastMove(null)
+    return () => clearInterval(interval)
+  }, [game?.currentTurn, game?.status])
 
-      toast.success(
-        "New game started 🎮"
-      )
-    } catch (error) {
-      console.error(error)
-      toast.error(
-        "Failed to reset game"
-      )
-    }
-  }
-
-  function formatTime(seconds: number) {
-    const min = Math.floor(seconds / 60)
-    const sec = seconds % 60
-
-    return `${min}:${sec
-      .toString()
-      .padStart(2, "0")}`
-  }
-
-  function getGameStatus() {
-    if (game?.status === "ACTIVE")
-      return "Active"
-
-    if (game?.status === "COMPLETED") {
-      if (game.result === "WHITE_WIN")
-        return "White Won"
-
-      if (game.result === "BLACK_WIN")
-        return "Black Won"
-
-      if (game.result === "DRAW")
-        return "Draw"
-    }
-
-    return game?.status
-  }
-
-  if (
-    isLoading ||
-    !game ||
-    !userId ||
-    !gameId
-  ) {
+  // ---------------------------
+  // LOADING STATE
+  // ---------------------------
+  if (isLoading || !game || !gameId || !userId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -269,51 +148,52 @@ export default function ChessGame() {
     )
   }
 
-  const isGameActive =
-    game.status === "ACTIVE"
+  if (!userColor) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-white">
+        Not a player in this game
+      </div>
+    )
+  }
 
+  const isGameActive = game.status === "ACTIVE"
+
+  // ---------------------------
+  // UI
+  // ---------------------------
   return (
     <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-4 bg-gradient-to-b from-slate-900 to-slate-800 min-h-screen">
-      
+
       <div className="order-2 md:order-1 col-span-2">
-        <ChessSidebarLeft
-          resetGame={handleReset}
-        />
+        <ChessSidebarLeft resetGame={() => {}} />
       </div>
 
       <div className="order-1 md:order-2 col-span-8 flex flex-col items-center space-y-4">
 
+        {/* BLACK */}
         <Card className="w-full max-w-[520px] p-3 bg-black/40 border border-cyan-500">
           <PlayerRow
             player={game.blackPlayer}
-            active={
-              game.currentTurn ===
-              "black"
-            }
+            active={game.currentTurn === "black"}
             time={blackTime}
             formatTime={formatTime}
           />
         </Card>
 
+        {/* BOARD */}
         <ChessBoard
           gameId={gameId}
           userId={userId}
           userColor={userColor}
-          initialPosition={
-            game.position
-          }
-          currentTurn={
-            game.currentTurn
-          }
+          initialPosition={game.position}
+          currentTurn={game.currentTurn}
         />
 
+        {/* WHITE */}
         <Card className="w-full max-w-[520px] p-3 bg-black/40 border border-purple-500">
           <PlayerRow
             player={game.whitePlayer}
-            active={
-              game.currentTurn ===
-              "white"
-            }
+            active={game.currentTurn === "white"}
             time={whiteTime}
             formatTime={formatTime}
           />
@@ -321,14 +201,11 @@ export default function ChessGame() {
 
         {!isGameActive && (
           <Card className="w-full max-w-[520px] text-center p-3">
-            {getGameStatus()}
+            {game.status}
           </Card>
         )}
 
-        <Button
-          onClick={handleReset}
-          disabled={!isGameActive}
-        >
+        <Button disabled={!isGameActive}>
           New Game
         </Button>
       </div>
@@ -336,10 +213,8 @@ export default function ChessGame() {
       <div className="order-3 col-span-2">
         <ChessSidebarRight
           turn={game.currentTurn}
-          moveCount={
-            game.moves.length
-          }
-           gameStatus={getGameStatus() ?? "ACTIVE"}
+          moveCount={game.moves.length}
+          gameStatus={game.status}
           history={game.moves}
         />
       </div>
@@ -347,35 +222,42 @@ export default function ChessGame() {
   )
 }
 
+// ---------------------------
+// PLAYER ROW
+// ---------------------------
 function PlayerRow({
   player,
   active,
   time,
   formatTime,
-}: any) {
+}: {
+  player: { name: string; image?: string }
+  active: boolean
+  time: number
+  formatTime: (t: number) => string
+}) {
   return (
     <div className="flex justify-between items-center text-white">
       <div className="flex gap-2 items-center">
         <img
-          src={
-            player.image ||
-            "/avatar.png"
-          }
+          src={player.image || "/avatar.png"}
           className="w-6 h-6 rounded-full"
         />
         {player.name}
       </div>
 
-      <Badge
-        variant="outline"
-        className={`${
-          active
-            ? "animate-pulse"
-            : ""
-        }`}
-      >
+      <Badge variant="outline" className={active ? "animate-pulse" : ""}>
         {formatTime(time)}
       </Badge>
     </div>
   )
+}
+
+// ---------------------------
+// TIME FORMAT
+// ---------------------------
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, "0")}`
 }

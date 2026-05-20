@@ -260,8 +260,9 @@ model Game {
 
   // Timing
   timeControl        String @default("10+0")
-  whiteTimeRemaining Int?
-  blackTimeRemaining Int?
+  whiteTimeRemaining Int
+  blackTimeRemaining Int
+  lastMoveAt DateTime?
 
   // Metadata
   moves       Move[]
@@ -400,6 +401,7 @@ enum GameType {
   LUDO
   BAGCHAL
 }
+// =============================================================================
 model Conversation {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())

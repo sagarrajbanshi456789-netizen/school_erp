@@ -105,7 +105,7 @@ export function useChess(options: UseChessOptions = {}) {
   const getPossibleMoves = useCallback(
     (square?: string) => {
       if (square) {
-        return game.moves({ square, verbose: true })
+        // return game.moves({ square, verbose: true })
       }
       return game.moves({ verbose: true })
     },
@@ -141,8 +141,8 @@ export function useChess(options: UseChessOptions = {}) {
       isStalemate: game.isStalemate(),
       isDraw: game.isDraw(),
       isGameOver: game.isGameOver(),
-      insufficientMaterial: game.insufficientMaterial(),
-      threefoldRepetition: game.threeRepetition(),
+      // insufficientMaterial: game.insufficientMaterial(),
+      // threefoldRepetition: game.threeRepetition(),
     }),
     [game]
   )

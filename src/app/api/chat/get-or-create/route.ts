@@ -1,3 +1,4 @@
+// src/app/api/chat/get-or-create/route.ts
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
@@ -32,11 +33,11 @@ export async function POST(req: Request) {
             create: [
               {
                 userId,
-                role: "CUSTOMER"
+                
               },
               {
                 userId: adminId,
-                role: "ADMIN"
+                
               }
             ]
           }

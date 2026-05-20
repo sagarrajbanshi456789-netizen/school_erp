@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       data: {
         title,
         author,
-        href,
+        
         subjectId,
         description: description || "",
         slug,

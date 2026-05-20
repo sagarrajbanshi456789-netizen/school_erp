@@ -24,7 +24,8 @@ export function isPlayersTurn(
   userId: string
 ): boolean {
   const userColor = getUserColorInGame(game, userId)
-  return userColor === game.currentTurn
+  // return userColor === game.currentTurn
+  return false
 }
 
 export function getGameStatus(game: Game): string {

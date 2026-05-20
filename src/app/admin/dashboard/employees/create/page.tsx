@@ -4,7 +4,9 @@ import { createEmployee } from "@/lib/actions/employeeActions"
 import { redirect } from "next/navigation"
 
 export default function AddEmployeePage() {
-  const handleCreate = async (formData: FormData) => {
+    async function handleCreate(formData: FormData) {
+    "use server"
+
   const data = {
     name: formData.get("name") as string,
     email: formData.get("email") as string,

@@ -11,48 +11,63 @@ export function initSocket(server: any) {
 
   console.log("🟢 SOCKET SERVER INITIALIZED")
 
+  // Track user → sockets (multi-tab safe)
+  const userSockets = new Map<string, Set<string>>()
+
   io.on("connection", (socket) => {
     console.log("🟢 Connected:", socket.id)
 
     let currentUserId: string | null = null
 
     // =========================
-    // USER JOIN (ONLINE STATUS)
+    // USER ONLINE
     // =========================
     socket.on("join_user", ({ userId }) => {
       if (!userId) return
 
       currentUserId = userId
-      socket.join(userId)
+      socket.join(`user:${userId}`)
+
+      if (!userSockets.has(userId)) {
+        userSockets.set(userId, new Set())
+      }
+
+      userSockets.get(userId)!.add(socket.id)
 
       console.log(`👤 User online: ${userId}`)
 
-      io.emit("user_online", userId)
+      // safer broadcast (can later scope by friends only)
+      io.emit("user_online", { userId })
     })
 
     // =========================
-    // JOIN CONVERSATION
+    // CHAT ROOM
     // =========================
     socket.on("join_conversation", ({ conversationId }) => {
       if (!conversationId) return
 
-      socket.join(conversationId)
+      socket.join(`conv:${conversationId}`)
 
       console.log(`💬 Joined conversation: ${conversationId}`)
     })
 
     // =========================
-    // SEND MESSAGE
+    // CHESS ROOM (NEW)
+    // =========================
+    socket.on("join_game", ({ gameId }) => {
+      if (!gameId) return
+
+      socket.join(`game:${gameId}`)
+
+      console.log(`♟ Joined game: ${gameId}`)
+    })
+
+    // =========================
+    // SEND MESSAGE (CHAT)
     // =========================
     socket.on("send_message", async (data) => {
       try {
-        if (
-          !data?.conversationId ||
-          !data?.senderId ||
-          !data?.content
-        ) {
-          return
-        }
+        if (!data?.conversationId || !data?.senderId || !data?.content) return
 
         const message = await prisma.message.create({
           data: {
@@ -72,42 +87,41 @@ export function initSocket(server: any) {
           },
         })
 
-        io.to(data.conversationId).emit(
+        io.to(`conv:${data.conversationId}`).emit(
           "new_message",
           message
         )
 
         if (data.receiverId) {
-          io.to(data.receiverId).emit(
+          io.to(`user:${data.receiverId}`).emit(
             "message_notification",
             message
           )
         }
-
       } catch (error) {
         console.error("❌ SEND_MESSAGE_ERROR:", error)
       }
     })
 
     // =========================
-    // READ RECEIPT (✓✓)
+    // READ RECEIPT
     // =========================
     socket.on("mark_read", ({ conversationId, userId }) => {
       if (!conversationId || !userId) return
 
-      io.to(conversationId).emit("message_read", {
+      io.to(`conv:${conversationId}`).emit("message_read", {
         conversationId,
         userId,
       })
     })
 
     // =========================
-    // TYPING INDICATOR
+    // TYPING
     // =========================
     socket.on("typing", ({ conversationId, userId }) => {
       if (!conversationId) return
 
-      socket.to(conversationId).emit("typing", {
+      socket.to(`conv:${conversationId}`).emit("typing", {
         userId,
       })
     })
@@ -115,21 +129,49 @@ export function initSocket(server: any) {
     socket.on("stop_typing", ({ conversationId, userId }) => {
       if (!conversationId) return
 
-      socket.to(conversationId).emit("stop_typing", {
+      socket.to(`conv:${conversationId}`).emit("stop_typing", {
         userId,
       })
     })
 
     // =========================
-    // DISCONNECT (OFFLINE STATUS)
+    // CHESS MOVE (READY HOOK)
+    // =========================
+    socket.on("make_move", async (data) => {
+      try {
+        const { gameId, move } = data
+        if (!gameId || !move) return
+
+        // ⚠️ later: validate move server-side with chess engine
+
+        io.to(`game:${gameId}`).emit("move_made", {
+          gameId,
+          move,
+        })
+      } catch (err) {
+        console.error("❌ MOVE_ERROR:", err)
+      }
+    })
+
+    // =========================
+    // DISCONNECT
     // =========================
     socket.on("disconnect", () => {
       console.log("🔴 Disconnected:", socket.id)
 
-      if (currentUserId) {
-        console.log(`👤 User offline: ${currentUserId}`)
+      if (!currentUserId) return
 
-        io.emit("user_offline", currentUserId)
+      const sockets = userSockets.get(currentUserId)
+      if (sockets) {
+        sockets.delete(socket.id)
+
+        if (sockets.size === 0) {
+          userSockets.delete(currentUserId)
+
+          console.log(`👤 User offline: ${currentUserId}`)
+
+          io.emit("user_offline", { userId: currentUserId })
+        }
       }
     })
   })

@@ -79,7 +79,7 @@ export default function PublicLayoutClient({
       
         <ChatWidget
           mode="PUBLIC"
-          conversationId={conversationId}
+          conversationId={conversationId || ""}
           userId={user?.id ?? ""}
         />
       
